@@ -46,32 +46,29 @@ const ContactPage = () => {
     {
       icon: MapPin,
       title: "Adresas",
-      details: ["Gedimino pr. 45-7", "LT-01109 Vilnius", "Lietuva"],
-      color: "text-red-500",
-      bgColor: "bg-red-50"
+      details: ["Švitrigailos g. 11A-330", "LT-03228 Vilnius", "Lietuva"],
+      color: "text-red-500"
     },
     {
       icon: Phone,
       title: "Telefonai",
-      details: ["+370 5 123 4567", "+370 600 12345", "Nemokamas: 8 800 12345"],
-      color: "text-green-500",
-      bgColor: "bg-green-50"
+      details: ["+370 694 98078"],
+      color: "text-green-500"
     },
     {
       icon: Mail,
       title: "El. paštas",
-      details: ["info@koradius-travel.com", "keliones@koradius-travel.com", "medicinos@koradius-travel.com"],
-      color: "text-blue-500",
-      bgColor: "bg-blue-50"
+      details: ["koradiustravel@gmail.com"],
+      color: "text-blue-500"
     },
     {
       icon: Clock,
       title: "Darbo laikas",
       details: ["Pr-Pn: 9:00 - 18:00", "Šeštadieniais: 10:00 - 15:00", "Sekmadieniais: uždaryta"],
-      color: "text-purple-500",
-      bgColor: "bg-purple-50"
+      color: "text-purple-500"
     }
   ];
+
 
   const subjects = [
     "Bendrasis klausimas",
@@ -109,35 +106,35 @@ const ContactPage = () => {
 
         {/* Quick Contact Options */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-2xl p-6 text-white text-center hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
+          <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-2xl p-6 text-white text-center hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 btn-hover-smooth">
             <Phone size={48} className="mx-auto mb-4" />
             <h3 className="text-xl font-bold mb-2">Skambinkite dabar</h3>
             <p className="mb-4 opacity-90">Greičiausias būdas gauti atsakymą</p>
             <a
-              href="tel:+37051234567"
-              className="bg-white hover:bg-gray-100 text-green-600 font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 inline-block"
+              href="tel:+37069498078"
+              className="bg-white hover:bg-gray-100 text-green-600 font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 inline-block btn-hover-smooth"
             >
-              +370 5 123 4567
+              +370 694 98078
             </a>
           </div>
 
-          <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl p-6 text-white text-center hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
+          <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl p-6 text-white text-center hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 btn-hover-smooth">
             <Mail size={48} className="mx-auto mb-4" />
             <h3 className="text-xl font-bold mb-2">Rašykite el. laišką</h3>
             <p className="mb-4 opacity-90">Atsakysime per 2-4 valandas</p>
             <a
-              href="mailto:info@koradius-travel.com"
-              className="bg-white hover:bg-gray-100 text-blue-600 font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 inline-block"
+              href="mailto:koradiustravel@gmail.com"
+              className="bg-white hover:bg-gray-100 text-blue-600 font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 inline-block btn-hover-smooth"
             >
               Rašyti laišką
             </a>
           </div>
 
-          <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-2xl p-6 text-white text-center hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
+          <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-2xl p-6 text-white text-center hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 btn-hover-smooth">
             <MessageCircle size={48} className="mx-auto mb-4" />
             <h3 className="text-xl font-bold mb-2">Live Chat</h3>
             <p className="mb-4 opacity-90">Tiesioginis pokalbis su konsultantu</p>
-            <button className="bg-white hover:bg-gray-100 text-purple-600 font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105">
+            <button className="bg-white hover:bg-gray-100 text-purple-600 font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 btn-hover-smooth">
               Pradėti pokalbį
             </button>
           </div>
@@ -199,10 +196,10 @@ const ContactPage = () => {
               </h3>
               <p className="text-red-700 text-sm mb-2">24/7 pagalbos linija:</p>
               <a
-                href="tel:+37060099999"
-                className="text-red-800 font-bold text-lg hover:text-red-900 transition-colors duration-300"
+                href="tel:+37069498078"
+                className="text-red-800 font-bold text-lg hover:text-red-900 transition-colors duration-300 btn-hover-smooth"
               >
-                +370 600 99999
+                +370 694 98078
               </a>
               <p className="text-red-600 text-xs mt-2">
                 Tik skubiais atvejais kelionės metu
@@ -215,19 +212,19 @@ const ContactPage = () => {
               <div className="flex space-x-4">
                 <a
                   href="#"
-                  className="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full transition-all duration-300 transform hover:scale-110 hover:shadow-lg"
+                  className="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full transition-all duration-300 transform hover:scale-110 hover:shadow-lg btn-hover-smooth"
                 >
                   <Facebook size={24} />
                 </a>
                 <a
                   href="#"
-                  className="bg-pink-600 hover:bg-pink-700 text-white p-4 rounded-full transition-all duration-300 transform hover:scale-110 hover:shadow-lg"
+                  className="bg-pink-600 hover:bg-pink-700 text-white p-4 rounded-full transition-all duration-300 transform hover:scale-110 hover:shadow-lg btn-hover-smooth"
                 >
                   <Instagram size={24} />
                 </a>
                 <a
                   href="#"
-                  className="bg-red-600 hover:bg-red-700 text-white p-4 rounded-full transition-all duration-300 transform hover:scale-110 hover:shadow-lg"
+                  className="bg-red-600 hover:bg-red-700 text-white p-4 rounded-full transition-all duration-300 transform hover:scale-110 hover:shadow-lg btn-hover-smooth"
                 >
                   <Youtube size={24} />
                 </a>
@@ -371,7 +368,7 @@ const ContactPage = () => {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className={`w-full bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center justify-center space-x-3 ${
+                  className={`w-full bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center justify-center space-x-3 btn-hover-smooth ${
                     isSubmitting ? 'opacity-75 cursor-not-allowed' : ''
                   }`}
                 >
@@ -399,17 +396,18 @@ const ContactPage = () => {
               <h2 className="text-2xl font-bold text-gray-800 mb-2">Mūsų buveinė</h2>
               <p className="text-gray-600">Atvykite į mūsų biurą Vilniaus centre</p>
             </div>
-            <div className="h-96 bg-gray-200 flex items-center justify-center">
-              <div className="text-center text-gray-500">
-                <MapPin size={48} className="mx-auto mb-4" />
-                <p className="text-lg font-semibold">Čia būtų Google Maps žemėlapis</p>
-                <p className="text-sm">Gedimino pr. 45-7, Vilnius</p>
-                <div className="mt-4 space-y-2 text-sm">
-                  <p>🚗 Mokamas parkavimas šalia</p>
-                  <p>🚌 Autobusų stotelė "Lukiškės" (200m)</p>
-                  <p>🚇 Metro stotis "Lukiškės" (300m)</p>
-                </div>
-              </div>
+            <div className="h-96">
+              <iframe
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2304.6765974!2d25.2675214!3d54.6765974!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x46dd946d87d7005d%3A0x11b4d455af676ea0!2s%C5%A0vitrigailos%20g.%2011A%2C%20Vilnius%2003228!5e0!3m2!1slt!2slt!4v1234567890123"
+                width="100%"
+                height="100%"
+                style={{ border: 0 }}
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                title="Koradius Travel - Švitrigailos g. 11A-330, Vilnius"
+                className="w-full h-full"
+              ></iframe>
             </div>
           </div>
         </div>

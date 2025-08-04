@@ -1,8 +1,18 @@
 import React from 'react';
-import { MapPin, Clock, Users, Star, ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { MapPin, Clock, Star, ArrowRight } from 'lucide-react';
 
 const FeaturedTours = () => {
+  const navigate = useNavigate();
+
+  const handleBookNow = (tourId: number) => {
+    navigate(`/tours?tour=${tourId}`);
+  };
+
+  const handleMoreInfo = (tourId: number) => {
+    navigate(`/tours?tour=${tourId}&details=true`);
+  };
+
   const featuredTours = [
     {
       id: 1,
@@ -157,10 +167,16 @@ const FeaturedTours = () => {
 
                 {/* Action Buttons */}
                 <div className="flex space-x-3">
-                  <button className="flex-1 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg">
+                  <button 
+                    onClick={() => handleBookNow(tour.id)}
+                    className="flex-1 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg btn-hover-smooth"
+                  >
                     Užsisakyti dabar
                   </button>
-                  <button className="px-6 py-3 border-2 border-teal-500 text-teal-600 hover:bg-teal-500 hover:text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105">
+                  <button 
+                    onClick={() => handleMoreInfo(tour.id)}
+                    className="px-6 py-3 border-2 border-teal-500 text-teal-600 hover:bg-teal-500 hover:text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 btn-hover-smooth"
+                  >
                     Daugiau
                   </button>
                 </div>
@@ -173,7 +189,7 @@ const FeaturedTours = () => {
         <div className="text-center">
           <Link
             to="/tours"
-            className="inline-flex items-center space-x-2 bg-white hover:bg-teal-50 text-teal-600 font-bold py-4 px-8 rounded-xl border-2 border-teal-500 hover:border-teal-600 transition-all duration-300 transform hover:scale-105 hover:shadow-lg"
+            className="inline-flex items-center space-x-2 bg-white hover:bg-teal-50 text-teal-600 font-bold py-4 px-8 rounded-xl border-2 border-teal-500 hover:border-teal-600 transition-all duration-300 transform hover:scale-105 hover:shadow-lg btn-hover-smooth"
           >
             <span>Žiūrėti visas keliones</span>
             <ArrowRight size={20} />

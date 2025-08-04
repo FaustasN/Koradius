@@ -1,9 +1,15 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { X, ChevronLeft, ChevronRight, MapPin, Camera } from 'lucide-react';
 
 const Gallery = () => {
+  const navigate = useNavigate();
   const [selectedImage, setSelectedImage] = useState<number | null>(null);
   const [activeFilter, setActiveFilter] = useState('all');
+
+  const handlePlanTrip = () => {
+    navigate('/tours');
+  };
 
   const images = [
     {
@@ -156,7 +162,7 @@ const Gallery = () => {
               <button
                 key={filter.id}
                 onClick={() => setActiveFilter(filter.id)}
-                className={`flex items-center space-x-2 px-6 py-3 rounded-full font-semibold transition-all duration-300 transform hover:scale-105 ${
+                className={`flex items-center space-x-2 px-6 py-3 rounded-full font-semibold transition-all duration-300 transform hover:scale-105 btn-hover-smooth ${
                   activeFilter === filter.id
                     ? 'bg-gradient-to-r from-teal-500 to-teal-600 text-white shadow-lg'
                     : 'bg-white text-gray-700 hover:bg-teal-50 hover:text-teal-600 shadow-md'
@@ -209,7 +215,7 @@ const Gallery = () => {
             {/* Close Button */}
             <button
               onClick={closeLightbox}
-              className="absolute top-4 right-4 text-white hover:text-teal-400 transition-colors duration-300 z-10"
+              className="absolute top-4 right-4 text-white hover:text-teal-400 transition-colors duration-300 z-10 btn-hover-smooth"
             >
               <X size={32} />
             </button>
@@ -217,14 +223,14 @@ const Gallery = () => {
             {/* Navigation Buttons */}
             <button
               onClick={() => navigateImage('prev')}
-              className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white hover:text-teal-400 transition-colors duration-300 z-10"
+              className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white hover:text-teal-400 transition-colors duration-300 z-10 btn-hover-smooth"
             >
               <ChevronLeft size={48} />
             </button>
             
             <button
               onClick={() => navigateImage('next')}
-              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white hover:text-teal-400 transition-colors duration-300 z-10"
+              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white hover:text-teal-400 transition-colors duration-300 z-10 btn-hover-smooth"
             >
               <ChevronRight size={48} />
             </button>
@@ -254,7 +260,10 @@ const Gallery = () => {
           <p className="text-lg text-gray-600 mb-6">
             Norite, kad jūsų nuotraukos atsidurtų mūsų galerijoje?
           </p>
-          <button className="bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg">
+          <button 
+            onClick={handlePlanTrip}
+            className="bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg btn-hover-smooth"
+          >
             Planuoti kelionę
           </button>
         </div>

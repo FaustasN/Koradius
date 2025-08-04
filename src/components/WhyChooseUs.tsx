@@ -67,7 +67,7 @@ const WhyChooseUs = () => {
             return (
               <div
                 key={index}
-                className="bg-white rounded-2xl shadow-lg p-8 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 group"
+                className="bg-white rounded-2xl shadow-lg p-8 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 group btn-hover-smooth"
               >
                 <div className={`${feature.bgColor} w-16 h-16 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
                   <IconComponent className={feature.color} size={32} />

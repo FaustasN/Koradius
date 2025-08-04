@@ -1,7 +1,18 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Award, Users, Globe, Heart, Shield, Clock, MapPin, Phone, Mail } from 'lucide-react';
 
 const AboutPage = () => {
+  const navigate = useNavigate();
+
+  const handleContact = () => {
+    navigate('/contact');
+  };
+
+  const handleViewTours = () => {
+    navigate('/tours');
+  };
+
   const teamMembers = [
     {
       name: "Rūta Petraitienė",
@@ -307,20 +318,23 @@ const AboutPage = () => {
           </div>
         </div>
 
-        {/* Contact CTA */}
-        <div className="text-center bg-white rounded-3xl shadow-lg p-12">
-          <h2 className="text-3xl font-bold text-gray-800 mb-4">
-            Turite klausimų apie mus?
-          </h2>
-          <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
-            Mūsų komanda visada pasiruošusi atsakyti į jūsų klausimus ir padėti suplanuoti tobulą kelionę
+        {/* Call to Action */}
+        <div className="text-center mt-16">
+          <p className="text-lg text-gray-600 mb-6">
+            Pasiruošę pradėti savo kelionę su mumis?
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg">
+            <button 
+              onClick={handleContact}
+              className="bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg btn-hover-smooth"
+            >
               Susisiekti su mumis
             </button>
-            <button className="border-2 border-teal-500 hover:bg-teal-500 hover:text-white text-teal-600 font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105">
-              Planuoti kelionę
+            <button 
+              onClick={handleViewTours}
+              className="border-2 border-teal-500 hover:bg-teal-500 hover:text-white text-teal-600 font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 btn-hover-smooth"
+            >
+              Žiūrėti keliones
             </button>
           </div>
         </div>

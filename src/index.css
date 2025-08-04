@@ -104,9 +104,9 @@ html {
   animation: bounce 1s infinite;
 }
 
-/* Hover effects */
+/* Enhanced hover effects */
 .hover-lift {
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .hover-lift:hover {
@@ -114,23 +114,33 @@ html {
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
-/* Button hover effects */
+/* Enhanced button hover effects */
 .btn-primary {
-  @apply bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg;
+  @apply bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 ease-out transform hover:scale-105 hover:shadow-lg;
 }
 
 .btn-secondary {
-  @apply bg-white hover:bg-teal-50 text-teal-600 border-2 border-teal-500 hover:border-teal-600 font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105;
+  @apply bg-white hover:bg-teal-50 text-teal-600 border-2 border-teal-500 hover:border-teal-600 font-bold py-3 px-6 rounded-xl transition-all duration-300 ease-out transform hover:scale-105;
 }
 
-/* Card hover effects */
+/* Universal button hover effect */
+.btn-hover-smooth {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-hover-smooth:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Enhanced card hover effects */
 .card-hover {
-  @apply transition-all duration-500 transform hover:-translate-y-2 hover:shadow-2xl;
+  @apply transition-all duration-500 ease-out transform hover:-translate-y-2 hover:shadow-2xl;
 }
 
-/* Image hover effects */
+/* Enhanced image hover effects */
 .image-hover {
-  @apply transition-transform duration-700 group-hover:scale-110;
+  @apply transition-transform duration-700 ease-out group-hover:scale-110;
 }
 
 /* Text gradient */
@@ -169,6 +179,42 @@ select:focus {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* Scroll to top button */
+.scroll-to-top {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(135deg, #14b8a6, #0f766e);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  box-shadow: 0 4px 12px rgba(20, 184, 166, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(20px);
+  z-index: 1000;
+}
+
+.scroll-to-top.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.scroll-to-top:hover {
+  transform: translateY(-3px) scale(1.1);
+  box-shadow: 0 8px 25px rgba(20, 184, 166, 0.4);
+  background: linear-gradient(135deg, #0f766e, #0d5a52);
 }
 
 /* Responsive text sizes */

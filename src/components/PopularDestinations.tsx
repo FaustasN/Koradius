@@ -1,9 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, MapPin, TrendingUp } from 'lucide-react';
 
 const PopularDestinations = () => {
+  const navigate = useNavigate();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+
+  const handleViewOffers = (destinationName: string) => {
+    navigate(`/tours?destination=${encodeURIComponent(destinationName)}`);
+  };
 
   const destinations = [
     {
@@ -139,7 +145,10 @@ const PopularDestinations = () => {
                         
                         <div className="flex items-center justify-between">
                           <span className="text-lg font-bold text-yellow-400">{destination.price}</span>
-                          <button className="bg-white/20 backdrop-blur-sm hover:bg-white/30 px-4 py-2 rounded-lg transition-all duration-300 transform hover:scale-105">
+                          <button 
+                            onClick={() => handleViewOffers(destination.name)}
+                            className="bg-white/20 backdrop-blur-sm hover:bg-white/30 px-4 py-2 rounded-lg transition-all duration-300 transform hover:scale-105 btn-hover-smooth"
+                          >
                             Žiūrėti pasiūlymus
                           </button>
                         </div>
@@ -154,14 +163,14 @@ const PopularDestinations = () => {
           {/* Navigation Arrows */}
           <button
             onClick={prevSlide}
-            className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white text-gray-800 p-3 rounded-full shadow-lg transition-all duration-300 transform hover:scale-110 z-20"
+            className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white text-gray-800 p-3 rounded-full shadow-lg transition-all duration-300 transform hover:scale-110 z-20 btn-hover-smooth"
           >
             <ChevronLeft size={24} />
           </button>
           
           <button
             onClick={nextSlide}
-            className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white text-gray-800 p-3 rounded-full shadow-lg transition-all duration-300 transform hover:scale-110 z-20"
+            className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white text-gray-800 p-3 rounded-full shadow-lg transition-all duration-300 transform hover:scale-110 z-20 btn-hover-smooth"
           >
             <ChevronRight size={24} />
           </button>

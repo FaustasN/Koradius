@@ -1,9 +1,23 @@
 import React, { useState } from 'react';
-import { X, ChevronLeft, ChevronRight, MapPin, Camera, Heart, Download, Share2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { X, ChevronLeft, ChevronRight, MapPin, Camera, Heart, Share2, Download } from 'lucide-react';
 
 const GalleryPage = () => {
+  const navigate = useNavigate();
   const [selectedImage, setSelectedImage] = useState<number | null>(null);
   const [activeFilter, setActiveFilter] = useState('all');
+
+  const handleUploadPhotos = () => {
+    navigate('/contact?subject=Įkelti nuotraukas');
+  };
+
+  const handleLearnMore = () => {
+    navigate('/about');
+  };
+
+  const handleParticipateContest = () => {
+    navigate('/contact?subject=Dalyvauti konkurse');
+  };
 
   const images = [
     {
@@ -345,10 +359,16 @@ const GalleryPage = () => {
             Norite, kad jūsų nuotraukos atsidurtų mūsų galerijoje? Siųskite jas mums ir įkvėpkite kitus keliautojus!
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="bg-white hover:bg-gray-100 text-teal-600 font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg">
+            <button 
+              onClick={handleUploadPhotos}
+              className="bg-white hover:bg-gray-100 text-teal-600 font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg"
+            >
               Įkelti nuotraukas
             </button>
-            <button className="border-2 border-white hover:bg-white hover:text-teal-600 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105">
+            <button 
+              onClick={handleLearnMore}
+              className="border-2 border-white hover:bg-white hover:text-teal-600 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105"
+            >
               Sužinoti daugiau
             </button>
           </div>
@@ -389,7 +409,10 @@ const GalleryPage = () => {
           </div>
           
           <div className="text-center mt-8">
-            <button className="bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg">
+            <button 
+              onClick={handleParticipateContest}
+              className="bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg btn-hover-smooth"
+            >
               Dalyvauti konkurse
             </button>
           </div>

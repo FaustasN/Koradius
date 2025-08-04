@@ -118,7 +118,7 @@ const Hero = () => {
             <div className="mt-8">
               <button
                 onClick={handleSearch}
-                className="w-full md:w-auto bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-4 px-12 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-xl flex items-center justify-center space-x-3 text-lg"
+                className="w-full md:w-auto bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-4 px-12 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-xl flex items-center justify-center space-x-3 text-lg btn-hover-smooth"
               >
                 <Search size={24} />
                 <span>Ieškoti kelionių</span>

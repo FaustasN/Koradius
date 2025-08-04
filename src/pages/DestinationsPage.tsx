@@ -1,7 +1,22 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MapPin, TrendingUp, Star, Users, Calendar, Thermometer } from 'lucide-react';
 
 const DestinationsPage = () => {
+  const navigate = useNavigate();
+
+  const handleViewTours = (destinationName: string) => {
+    navigate(`/tours?destination=${encodeURIComponent(destinationName)}`);
+  };
+
+  const handleMoreInfo = (destinationName: string) => {
+    navigate(`/destinations?destination=${encodeURIComponent(destinationName)}`);
+  };
+
+  const handleContactConsultant = () => {
+    navigate('/contact');
+  };
+
   const [selectedRegion, setSelectedRegion] = useState('all');
 
   const destinations = [
@@ -276,11 +291,17 @@ const DestinationsPage = () => {
 
                 {/* Action Buttons */}
                 <div className="flex space-x-3">
-                  <button className="flex-1 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg">
+                  <button 
+                    onClick={() => handleViewTours(destination.name)}
+                    className="flex-1 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg btn-hover-smooth"
+                  >
                     Žiūrėti keliones
                   </button>
-                  <button className="px-6 py-3 border-2 border-teal-500 text-teal-600 hover:bg-teal-500 hover:text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105">
-                    Info
+                  <button 
+                    onClick={() => handleMoreInfo(destination.name)}
+                    className="px-6 py-3 border-2 border-teal-500 text-teal-600 hover:bg-teal-500 hover:text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 btn-hover-smooth"
+                  >
+                    Daugiau info
                   </button>
                 </div>
               </div>
@@ -323,14 +344,14 @@ const DestinationsPage = () => {
 
         {/* Call to Action */}
         <div className="text-center mt-16">
-          <h3 className="text-2xl font-bold text-gray-800 mb-4">
-            Neradote tinkamos krypties?
-          </h3>
-          <p className="text-lg text-gray-600 mb-8">
-            Susisiekite su mumis ir sukursime individualų kelionės planą
+          <p className="text-lg text-gray-600 mb-6">
+            Neradote tinkamos krypties? Susisiekite su mumis!
           </p>
-          <button className="bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg">
-            Planuoti individualią kelionę
+          <button 
+            onClick={handleContactConsultant}
+            className="bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg btn-hover-smooth"
+          >
+            Susisiekti su konsultantu
           </button>
         </div>
       </div>

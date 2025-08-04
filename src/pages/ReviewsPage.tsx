@@ -1,7 +1,14 @@
 import React, { useState } from 'react';
-import { Star, ChevronLeft, ChevronRight, Quote, Filter, Calendar, MapPin, ThumbsUp } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Star, ChevronLeft, ChevronRight, Quote, Filter, Calendar, MapPin, ThumbsUp, ChevronDown } from 'lucide-react';
 
 const ReviewsPage = () => {
+  const navigate = useNavigate();
+
+  const handleWriteReview = () => {
+    navigate('/contact?subject=Rašyti atsiliepimą');
+  };
+
   const [currentReview, setCurrentReview] = useState(0);
   const [filterRating, setFilterRating] = useState('all');
   const [filterCategory, setFilterCategory] = useState('all');
@@ -391,7 +398,7 @@ const ReviewsPage = () => {
                     <Calendar size={14} />
                     <span>{review.date}</span>
                   </div>
-                  <button className="flex items-center space-x-1 text-teal-600 hover:text-teal-700 transition-colors duration-300">
+                  <button className="flex items-center space-x-1 text-teal-600 hover:text-teal-700 transition-colors duration-300 btn-hover-smooth">
                     <ThumbsUp size={14} />
                     <span>Naudinga ({review.helpful})</span>
                   </button>
@@ -408,7 +415,10 @@ const ReviewsPage = () => {
           <p className="text-xl opacity-90 mb-8 max-w-2xl mx-auto">
             Jūsų atsiliepimas padės kitiems keliautojams pasirinkti tinkamą kelionę
           </p>
-          <button className="bg-white hover:bg-gray-100 text-teal-600 font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg">
+          <button 
+            onClick={handleWriteReview}
+            className="bg-white hover:bg-gray-100 text-teal-600 font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg btn-hover-smooth"
+          >
             Rašyti atsiliepimą
           </button>
         </div>

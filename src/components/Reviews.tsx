@@ -1,9 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Star, ChevronLeft, ChevronRight, Quote } from 'lucide-react';
 
 const Reviews = () => {
+  const navigate = useNavigate();
   const [currentReview, setCurrentReview] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+
+  const handlePlanTrip = () => {
+    navigate('/tours');
+  };
 
   const reviews = [
     {
@@ -164,14 +170,14 @@ const Reviews = () => {
           {/* Navigation Arrows */}
           <button
             onClick={prevReview}
-            className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white hover:bg-teal-50 text-teal-600 p-3 rounded-full shadow-lg transition-all duration-300 transform hover:scale-110 z-20"
+            className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white hover:bg-teal-50 text-teal-600 p-3 rounded-full shadow-lg transition-all duration-300 transform hover:scale-110 z-20 btn-hover-smooth"
           >
             <ChevronLeft size={24} />
           </button>
           
           <button
             onClick={nextReview}
-            className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white hover:bg-teal-50 text-teal-600 p-3 rounded-full shadow-lg transition-all duration-300 transform hover:scale-110 z-20"
+            className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white hover:bg-teal-50 text-teal-600 p-3 rounded-full shadow-lg transition-all duration-300 transform hover:scale-110 z-20 btn-hover-smooth"
           >
             <ChevronRight size={24} />
           </button>
@@ -220,7 +226,10 @@ const Reviews = () => {
           <p className="text-lg text-gray-600 mb-6">
             Prisijunkite prie tūkstančių patenkintų klientų
           </p>
-          <button className="bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg">
+          <button 
+            onClick={handlePlanTrip}
+            className="bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg btn-hover-smooth"
+          >
             Planuoti savo kelionę
           </button>
         </div>

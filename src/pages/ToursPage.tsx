@@ -1,11 +1,32 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, Filter, MapPin, Clock, Users, Star, Calendar, Euro, ChevronDown } from 'lucide-react';
 
 const ToursPage = () => {
+  const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('popular');
   const [priceRange, setPriceRange] = useState([0, 2000]);
+
+  const handleBookNow = (tourId: number) => {
+    navigate(`/tours?tour=${tourId}`);
+  };
+
+  const handleMoreInfo = (tourId: number) => {
+    navigate(`/tours?tour=${tourId}&details=true`);
+  };
+
+  const handleLoadMore = () => {
+    // Simulate loading more tours
+    console.log('Loading more tours...');
+  };
+
+  const handleClearFilters = () => {
+    setActiveFilter('all');
+    setSearchTerm('');
+    setPriceRange([0, 2000]);
+  };
 
   const tours = [
     {
@@ -361,11 +382,17 @@ const ToursPage = () => {
 
                 {/* Action Buttons */}
                 <div className="flex space-x-2">
-                  <button className="flex-1 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 text-sm">
-                    Užsisakyti
+                  <button 
+                    onClick={() => handleBookNow(tour.id)}
+                    className="flex-1 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-lg btn-hover-smooth"
+                  >
+                    Užsisakyti dabar
                   </button>
-                  <button className="px-4 py-2 border-2 border-teal-500 text-teal-600 hover:bg-teal-500 hover:text-white font-semibold rounded-lg transition-all duration-300 text-sm">
-                    Info
+                  <button 
+                    onClick={() => handleMoreInfo(tour.id)}
+                    className="px-4 py-2 border-2 border-teal-500 text-teal-600 hover:bg-teal-500 hover:text-white font-semibold rounded-lg transition-all duration-300 text-sm btn-hover-smooth"
+                  >
+                    Daugiau
                   </button>
                 </div>
               </div>
@@ -380,11 +407,7 @@ const ToursPage = () => {
             <h3 className="text-2xl font-bold text-gray-800 mb-2">Kelionių nerasta</h3>
             <p className="text-gray-600 mb-6">Pabandykite pakeisti paieškos kriterijus</p>
             <button
-              onClick={() => {
-                setActiveFilter('all');
-                setSearchTerm('');
-                setPriceRange([0, 2000]);
-              }}
+              onClick={handleClearFilters}
               className="bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105"
             >
               Išvalyti filtrus
@@ -392,14 +415,15 @@ const ToursPage = () => {
           </div>
         )}
 
-        {/* Load More */}
-        {filteredTours.length > 0 && (
-          <div className="text-center mt-12">
-            <button className="bg-white hover:bg-teal-50 text-teal-600 font-bold py-4 px-8 rounded-xl border-2 border-teal-500 hover:border-teal-600 transition-all duration-300 transform hover:scale-105 hover:shadow-lg">
-              Rodyti daugiau kelionių
-            </button>
-          </div>
-        )}
+        {/* Load More Button */}
+        <div className="text-center mt-12">
+          <button 
+            onClick={handleLoadMore}
+            className="bg-white hover:bg-teal-50 text-teal-600 font-bold py-4 px-8 rounded-xl border-2 border-teal-500 hover:border-teal-600 transition-all duration-300 transform hover:scale-105 hover:shadow-lg btn-hover-smooth"
+          >
+            Rodyti daugiau kelionių
+          </button>
+        </div>
       </div>
     </div>
   );

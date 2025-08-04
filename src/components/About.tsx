@@ -112,7 +112,7 @@ const About = () => {
               return (
                 <div
                   key={index}
-                  className="text-center p-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl hover:shadow-lg transition-all duration-300 transform hover:-translate-y-2"
+                  className="text-center p-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl hover:shadow-lg transition-all duration-300 transform hover:-translate-y-2 btn-hover-smooth"
                 >
                   <div className="bg-gradient-to-r from-teal-500 to-teal-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                     <IconComponent className="text-white" size={32} />
@@ -132,7 +132,7 @@ const About = () => {
             {teamMembers.map((member, index) => (
               <div
                 key={index}
-                className="text-center bg-white rounded-2xl shadow-lg p-8 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2"
+                className="text-center bg-white rounded-2xl shadow-lg p-8 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 btn-hover-smooth"
               >
                 <img
                   src={member.image}

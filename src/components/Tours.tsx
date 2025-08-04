@@ -1,8 +1,23 @@
 import React, { useState } from 'react';
-import { MapPin, Clock, Users, Star, Calendar, Euro } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { MapPin, Clock, Star, Filter } from 'lucide-react';
 
 const Tours = () => {
+  const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState('all');
+
+  const handleBookNow = (tourId: number) => {
+    navigate(`/tours?tour=${tourId}`);
+  };
+
+  const handleMoreInfo = (tourId: number) => {
+    navigate(`/tours?tour=${tourId}&details=true`);
+  };
+
+  const handleLoadMore = () => {
+    // Simulate loading more tours
+    console.log('Loading more tours...');
+  };
 
   const tours = [
     {
@@ -228,10 +243,16 @@ const Tours = () => {
 
                 {/* Action Buttons */}
                 <div className="flex space-x-3">
-                  <button className="flex-1 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg">
+                  <button 
+                    onClick={() => handleBookNow(tour.id)}
+                    className="flex-1 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg btn-hover-smooth"
+                  >
                     Užsisakyti dabar
                   </button>
-                  <button className="px-6 py-3 border-2 border-teal-500 text-teal-600 hover:bg-teal-500 hover:text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105">
+                  <button 
+                    onClick={() => handleMoreInfo(tour.id)}
+                    className="px-6 py-3 border-2 border-teal-500 text-teal-600 hover:bg-teal-500 hover:text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 btn-hover-smooth"
+                  >
                     Daugiau
                   </button>
                 </div>
@@ -242,7 +263,10 @@ const Tours = () => {
 
         {/* Load More Button */}
         <div className="text-center mt-12">
-          <button className="bg-white hover:bg-teal-50 text-teal-600 font-bold py-4 px-8 rounded-xl border-2 border-teal-500 hover:border-teal-600 transition-all duration-300 transform hover:scale-105 hover:shadow-lg">
+          <button 
+            onClick={handleLoadMore}
+            className="bg-white hover:bg-teal-50 text-teal-600 font-bold py-4 px-8 rounded-xl border-2 border-teal-500 hover:border-teal-600 transition-all duration-300 transform hover:scale-105 hover:shadow-lg btn-hover-smooth"
+          >
             Rodyti daugiau kelionių
           </button>
         </div>
