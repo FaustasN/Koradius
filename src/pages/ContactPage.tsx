@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { MapPin, Phone, Mail, Clock, Send, Facebook, Instagram, Youtube, MessageCircle, Calendar, User } from 'lucide-react';
+import StaggeredAnimation from '../components/StaggeredAnimation';
+import FadeInAnimation from '../components/FadeInAnimation';
 
 const ContactPage = () => {
   const [formData, setFormData] = useState({
@@ -69,7 +71,6 @@ const ContactPage = () => {
     }
   ];
 
-
   const subjects = [
     "Bendrasis klausimas",
     "Kelionės užsakymas",
@@ -95,17 +96,17 @@ const ContactPage = () => {
     <div className="min-h-screen bg-gray-50 pt-24">
       <div className="container mx-auto px-4 py-8">
         {/* Page Header */}
-        <div className="text-center mb-16">
+        <FadeInAnimation className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6">
             Susisiekite <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-500 to-teal-600">su mumis</span>
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
             Turite klausimų apie keliones? Mūsų komanda pasiruošusi jums padėti!
           </p>
-        </div>
+        </FadeInAnimation>
 
         {/* Quick Contact Options */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        <StaggeredAnimation className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-2xl p-6 text-white text-center hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 btn-hover-smooth">
             <Phone size={48} className="mx-auto mb-4" />
             <h3 className="text-xl font-bold mb-2">Skambinkite dabar</h3>
@@ -138,25 +139,177 @@ const ContactPage = () => {
               Pradėti pokalbį
             </button>
           </div>
-        </div>
+        </StaggeredAnimation>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          {/* Contact Information */}
-          <div className="lg:col-span-1 space-y-8">
+        {/* Main Content - Redesigned Layout */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-12">
+          {/* Left Column - Contact Form */}
+          <StaggeredAnimation className="bg-white rounded-2xl shadow-lg p-8">
+            <h2 className="text-2xl font-bold text-gray-800 mb-8">Parašykite mums</h2>
+            
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Vardas, pavardė *
+                  </label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                    <input
+                      type="text"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-teal-500 focus:outline-none transition-all duration-300 text-lg"
+                      placeholder="Jūsų vardas ir pavardė"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    El. paštas *
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-teal-500 focus:outline-none transition-all duration-300 text-lg"
+                      placeholder="jusu@email.com"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Telefonas
+                  </label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-teal-500 focus:outline-none transition-all duration-300 text-lg"
+                      placeholder="+370 600 12345"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Tema *
+                  </label>
+                  <select
+                    name="subject"
+                    value={formData.subject}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-teal-500 focus:outline-none transition-all duration-300 text-lg appearance-none bg-white"
+                  >
+                    <option value="">Pasirinkite temą</option>
+                    {subjects.map((subject, index) => (
+                      <option key={index} value={subject}>{subject}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Pageidaujamas ryšio būdas
+                  </label>
+                  <select
+                    name="preferredContact"
+                    value={formData.preferredContact}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-teal-500 focus:outline-none transition-all duration-300 text-lg appearance-none bg-white"
+                  >
+                    <option value="email">El. paštas</option>
+                    <option value="phone">Telefonas</option>
+                    <option value="both">Abu būdai</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Skubumas
+                  </label>
+                  <select
+                    name="urgency"
+                    value={formData.urgency}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-teal-500 focus:outline-none transition-all duration-300 text-lg appearance-none bg-white"
+                  >
+                    <option value="normal">Įprastas</option>
+                    <option value="urgent">Skubus</option>
+                    <option value="emergency">Labai skubus</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Žinutė *
+                </label>
+                <textarea
+                  name="message"
+                  value={formData.message}
+                  onChange={handleInputChange}
+                  required
+                  rows={6}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-teal-500 focus:outline-none transition-all duration-300 text-lg resize-none"
+                  placeholder="Parašykite savo klausimą ar pageidavimus..."
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className={`w-full bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center justify-center space-x-3 btn-hover-smooth ${
+                  isSubmitting ? 'opacity-75 cursor-not-allowed' : ''
+                }`}
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                    <span>Siunčiama...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send size={24} />
+                    <span>Siųsti žinutę</span>
+                  </>
+                )}
+              </button>
+            </form>
+          </StaggeredAnimation>
+
+          {/* Right Column - Contact Information */}
+          <StaggeredAnimation className="space-y-6" staggerDelay={0.15}>
             {/* Contact Details */}
-            <div className="bg-white rounded-2xl shadow-lg p-8">
-              <h2 className="text-2xl font-bold text-gray-800 mb-8">Kontaktinė informacija</h2>
+            <div className="bg-white rounded-2xl shadow-lg p-6">
+              <h2 className="text-xl font-bold text-gray-800 mb-6">Kontaktinė informacija</h2>
               
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {contactInfo.map((info, index) => {
                   const IconComponent = info.icon;
                   return (
-                    <div key={index} className="flex items-start space-x-4">
-                      <div className={`${info.color} ${info.bgColor} p-3 rounded-full flex-shrink-0`}>
-                        <IconComponent size={24} />
+                    <div key={index} className="flex items-start space-x-3">
+                      <div className={`${info.color} p-2 rounded-full flex-shrink-0`}>
+                        <IconComponent size={20} />
                       </div>
                       <div>
-                        <h3 className="font-bold text-gray-800 mb-2">{info.title}</h3>
+                        <h3 className="font-bold text-gray-800 mb-1">{info.title}</h3>
                         {info.details.map((detail, detailIndex) => (
                           <p key={detailIndex} className="text-gray-600 text-sm leading-relaxed">
                             {detail}
@@ -170,15 +323,15 @@ const ContactPage = () => {
             </div>
 
             {/* Office Hours */}
-            <div className="bg-white rounded-2xl shadow-lg p-8">
-              <h3 className="text-xl font-bold text-gray-800 mb-6">Darbo laikas</h3>
-              <div className="space-y-3">
+            <div className="bg-white rounded-2xl shadow-lg p-6">
+              <h3 className="text-lg font-bold text-gray-800 mb-4">Darbo laikas</h3>
+              <div className="space-y-2">
                 {officeHours.map((schedule, index) => (
-                  <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
-                    <span className="font-medium text-gray-700">{schedule.day}</span>
+                  <div key={index} className="flex justify-between items-center py-1 border-b border-gray-100 last:border-b-0">
+                    <span className="font-medium text-gray-700 text-sm">{schedule.day}</span>
                     <div className="flex items-center space-x-2">
-                      <span className="text-gray-600">{schedule.hours}</span>
-                      <div className={`w-3 h-3 rounded-full ${
+                      <span className="text-gray-600 text-sm">{schedule.hours}</span>
+                      <div className={`w-2 h-2 rounded-full ${
                         schedule.status === 'open' ? 'bg-green-500' :
                         schedule.status === 'limited' ? 'bg-yellow-500' : 'bg-red-500'
                       }`}></div>
@@ -188,209 +341,12 @@ const ContactPage = () => {
               </div>
             </div>
 
-            {/* Emergency Contact */}
-            <div className="bg-gradient-to-r from-red-50 to-red-100 rounded-2xl p-6 border-l-4 border-red-500">
-              <h3 className="font-bold text-red-800 mb-3 flex items-center">
-                <Phone className="mr-2" size={20} />
-                Skubus ryšys kelionės metu
-              </h3>
-              <p className="text-red-700 text-sm mb-2">24/7 pagalbos linija:</p>
-              <a
-                href="tel:+37069498078"
-                className="text-red-800 font-bold text-lg hover:text-red-900 transition-colors duration-300 btn-hover-smooth"
-              >
-                +370 694 98078
-              </a>
-              <p className="text-red-600 text-xs mt-2">
-                Tik skubiais atvejais kelionės metu
-              </p>
-            </div>
-
-            {/* Social Media */}
-            <div className="bg-white rounded-2xl shadow-lg p-8">
-              <h3 className="text-xl font-bold text-gray-800 mb-6">Sekite mus</h3>
-              <div className="flex space-x-4">
-                <a
-                  href="#"
-                  className="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full transition-all duration-300 transform hover:scale-110 hover:shadow-lg btn-hover-smooth"
-                >
-                  <Facebook size={24} />
-                </a>
-                <a
-                  href="#"
-                  className="bg-pink-600 hover:bg-pink-700 text-white p-4 rounded-full transition-all duration-300 transform hover:scale-110 hover:shadow-lg btn-hover-smooth"
-                >
-                  <Instagram size={24} />
-                </a>
-                <a
-                  href="#"
-                  className="bg-red-600 hover:bg-red-700 text-white p-4 rounded-full transition-all duration-300 transform hover:scale-110 hover:shadow-lg btn-hover-smooth"
-                >
-                  <Youtube size={24} />
-                </a>
-              </div>
-              <p className="text-gray-600 text-sm mt-4">
-                Sekite mūsų naujienas ir kelionių pasiūlymus socialiniuose tinkluose
-              </p>
-            </div>
-          </div>
-
-          {/* Contact Form */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-2xl shadow-lg p-8">
-              <h2 className="text-2xl font-bold text-gray-800 mb-8">Parašykite mums</h2>
-              
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Vardas, pavardė *
-                    </label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                      <input
-                        type="text"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-teal-500 focus:outline-none transition-all duration-300 text-lg"
-                        placeholder="Jūsų vardas ir pavardė"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      El. paštas *
-                    </label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                      <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-teal-500 focus:outline-none transition-all duration-300 text-lg"
-                        placeholder="jusu@email.com"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Telefonas
-                    </label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                      <input
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                        className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-teal-500 focus:outline-none transition-all duration-300 text-lg"
-                        placeholder="+370 600 12345"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Tema *
-                    </label>
-                    <select
-                      name="subject"
-                      value={formData.subject}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-teal-500 focus:outline-none transition-all duration-300 text-lg appearance-none bg-white"
-                    >
-                      <option value="">Pasirinkite temą</option>
-                      {subjects.map((subject, index) => (
-                        <option key={index} value={subject}>{subject}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Pageidaujamas ryšio būdas
-                    </label>
-                    <select
-                      name="preferredContact"
-                      value={formData.preferredContact}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-teal-500 focus:outline-none transition-all duration-300 text-lg appearance-none bg-white"
-                    >
-                      <option value="email">El. paštas</option>
-                      <option value="phone">Telefonas</option>
-                      <option value="both">Abu būdai</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Skubumas
-                    </label>
-                    <select
-                      name="urgency"
-                      value={formData.urgency}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-teal-500 focus:outline-none transition-all duration-300 text-lg appearance-none bg-white"
-                    >
-                      <option value="normal">Įprastas</option>
-                      <option value="urgent">Skubus</option>
-                      <option value="emergency">Labai skubus</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Žinutė *
-                  </label>
-                  <textarea
-                    name="message"
-                    value={formData.message}
-                    onChange={handleInputChange}
-                    required
-                    rows={6}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-teal-500 focus:outline-none transition-all duration-300 text-lg resize-none"
-                    placeholder="Parašykite savo klausimą ar pageidavimus..."
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className={`w-full bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center justify-center space-x-3 btn-hover-smooth ${
-                    isSubmitting ? 'opacity-75 cursor-not-allowed' : ''
-                  }`}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-                      <span>Siunčiama...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Send size={24} />
-                      <span>Siųsti žinutę</span>
-                    </>
-                  )}
-                </button>
-              </form>
-            </div>
-          </div>
+            
+          </StaggeredAnimation>
         </div>
 
         {/* Map */}
-        <div className="mt-16">
+        <StaggeredAnimation className="mb-12">
           <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
             <div className="p-6 border-b border-gray-100">
               <h2 className="text-2xl font-bold text-gray-800 mb-2">Mūsų buveinė</h2>
@@ -410,10 +366,10 @@ const ContactPage = () => {
               ></iframe>
             </div>
           </div>
-        </div>
+        </StaggeredAnimation>
 
         {/* FAQ Section */}
-        <div className="mt-16 bg-white rounded-3xl shadow-lg p-8">
+        <StaggeredAnimation className="bg-white rounded-3xl shadow-lg p-8" staggerDelay={0.1}>
           <h2 className="text-3xl font-bold text-gray-800 text-center mb-8">
             Dažnai užduodami <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-500 to-teal-600">klausimai</span>
           </h2>
@@ -453,7 +409,7 @@ const ContactPage = () => {
               </div>
             </div>
           </div>
-        </div>
+        </StaggeredAnimation>
       </div>
     </div>
   );
