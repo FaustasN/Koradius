@@ -76,7 +76,7 @@ const AboutPage = () => {
   ];
 
   const achievements = [
-    { number: "15+", label: "Metų patirtis", description: "Nuo 2009 metų" },
+    { number: "7+", label: "Metų patirtis", description: "Nuo 2009 metų" },
     { number: "5000+", label: "Laimingų klientų", description: "Kasmet aptarnaujame ~400 klientų" },
     { number: "50+", label: "Šalių", description: "Visose žemynuose" },
     { number: "98%", label: "Klientų pasitenkinimas", description: "Pagal atsiliepimus" }

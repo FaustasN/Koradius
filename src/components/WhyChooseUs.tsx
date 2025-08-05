@@ -89,7 +89,7 @@ const WhyChooseUs = () => {
         <div className="mt-16 bg-white rounded-3xl shadow-lg p-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center">
             <div className="p-6">
-              <div className="text-4xl font-bold text-teal-600 mb-2">15+</div>
+              <div className="text-4xl font-bold text-teal-600 mb-2">7+</div>
               <div className="text-gray-600">Metų patirtis</div>
             </div>
             <div className="p-6">

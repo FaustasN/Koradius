@@ -135,10 +135,7 @@ const Header = () => {
               <span className="text-sm font-semibold">24/7: +370 694 98078</span>
             </div>
 
-            {/* Search */}
-            <button className="p-2 text-gray-600 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-all duration-300 transform hover:scale-110 btn-hover-smooth">
-              <Search size={20} />
-            </button>
+          x
 
             {/* Language Selector */}
             <div className="relative group">
