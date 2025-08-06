@@ -8,8 +8,9 @@ import GalleryPage from './pages/GalleryPage';
 import ReviewsPage from './pages/ReviewsPage';
 import AboutPage from './pages/AboutPage';
 import ContactPage from './pages/ContactPage';
+import SearchPage from './pages/SearchPage';
 
-function App() {
+const App = () => {
   return (
     <Routes>
       <Route path="/" element={<Layout />}>
@@ -20,9 +21,10 @@ function App() {
         <Route path="reviews" element={<ReviewsPage />} />
         <Route path="about" element={<AboutPage />} />
         <Route path="contact" element={<ContactPage />} />
+        <Route path="search" element={<SearchPage />} />
       </Route>
     </Routes>
   );
-}
+};
 
 export default App;

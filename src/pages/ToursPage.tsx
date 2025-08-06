@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Filter, MapPin, Clock, Users, Star, Calendar, Euro, ChevronDown } from 'lucide-react';
-import NovaturIframe from '../components/NovaturIframe';
 
 const ToursPage = () => {
   const navigate = useNavigate();
@@ -419,13 +418,13 @@ const ToursPage = () => {
         {/* Load More Button */}
         <div className="text-center mt-12">
           <button 
-            onClick={NovaturIframe}
+           
             className="bg-white hover:bg-teal-50 text-teal-600 font-bold py-4 px-8 rounded-xl border-2 border-teal-500 hover:border-teal-600 transition-all duration-300 transform hover:scale-105 hover:shadow-lg btn-hover-smooth"
           >
             Rodyti daugiau kelionių
           </button>
         </div>
-     
+
       </div>
     </div>
   );

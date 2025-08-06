@@ -84,7 +84,16 @@ const Header = () => {
                 </div>
               </div>
             </div>
-
+            <Link 
+              to="/search"
+              className={`px-4 py-2 rounded-lg font-semibold transition-all duration-300 btn-hover-smooth ${
+                isActive('/search') 
+                  ? 'bg-teal-100 text-teal-700' 
+                  : 'text-gray-700 hover:bg-teal-50 hover:text-teal-600'
+              }`}
+            >
+              Ieškoti kelionių
+            </Link>
             <Link 
               to="/gallery"
               className={`px-4 py-2 rounded-lg font-semibold transition-all duration-300 btn-hover-smooth ${
@@ -135,7 +144,6 @@ const Header = () => {
               <span className="text-sm font-semibold">24/7: +370 694 98078</span>
             </div>
 
-          x
 
             {/* Language Selector */}
             <div className="relative group">
