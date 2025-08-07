@@ -30,9 +30,11 @@ const Header = () => {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-3 group">
-            <div className="w-12 h-12 bg-gradient-to-br from-teal-500 via-teal-600 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 transform group-hover:scale-105">
-              <span className="text-white font-bold text-xl">K</span>
-            </div>
+            <img 
+              src="/Icon/Logo_Koradius_EN-max-300x228.png" 
+              alt="Koradius Travel Logo" 
+              className="h-12 w-auto object-contain group-hover:scale-105 transition-transform duration-300"
+            />
             <div className="flex flex-col">
               <span className="text-2xl font-bold text-gray-800 group-hover:text-teal-600 transition-colors duration-300">Koradius</span>
               <span className="text-sm text-teal-600 font-medium -mt-1">Travel</span>
