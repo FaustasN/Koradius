@@ -1,6 +1,9 @@
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 // Try to load .env file if it exists, but don't fail if it doesn't
 try {
@@ -12,9 +15,51 @@ try {
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Ensure upload directories exist
+const ensureDirectoryExists = (dirPath) => {
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true });
+  }
+};
+
+ensureDirectoryExists(path.join(__dirname, 'uploads', 'gallery'));
+ensureDirectoryExists(path.join(__dirname, 'uploads', 'travel-packets'));
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadType = req.params.type || req.body.uploadType || 'gallery';
+    const uploadPath = path.join(__dirname, 'uploads', uploadType);
+    ensureDirectoryExists(uploadPath);
+    cb(null, uploadPath);
+  },
+  filename: (req, file, cb) => {
+    // Generate unique filename with timestamp
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Allow only image files
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'), false);
+    }
+  }
+});
+
 // Middleware
 app.use(cors());
 app.use(express.json());
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Database configuration
 const pool = new Pool({
@@ -115,6 +160,46 @@ pool.query('SELECT NOW()', async (err, res) => {
   }
 });
 
+// File upload endpoints
+app.post('/api/upload/:type', upload.single('image'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const fileUrl = `http://localhost:${PORT}/uploads/${req.params.type}/${req.file.filename}`;
+    
+    res.json({
+      success: true,
+      url: fileUrl,
+      filename: req.file.filename,
+      originalName: req.file.originalname,
+      size: req.file.size
+    });
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    res.status(500).json({ error: 'Failed to upload file' });
+  }
+});
+
+// Delete uploaded file endpoint
+app.delete('/api/upload/:type/:filename', (req, res) => {
+  try {
+    const { type, filename } = req.params;
+    const filePath = path.join(__dirname, 'uploads', type, filename);
+    
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      res.json({ success: true, message: 'File deleted successfully' });
+    } else {
+      res.status(404).json({ error: 'File not found' });
+    }
+  } catch (error) {
+    console.error('Error deleting file:', error);
+    res.status(500).json({ error: 'Failed to delete file' });
+  }
+});
+
 // Gallery endpoints
 app.get('/api/gallery', async (req, res) => {
   try {
@@ -182,10 +267,10 @@ app.get('/api/travel-packets', async (req, res) => {
 
 app.post('/api/travel-packets', async (req, res) => {
   try {
-    const { title, location, duration, price, originalPrice, category, badge, description, includes, availableSpots, departure } = req.body;
+    const { title, location, duration, price, originalPrice, category, badge, description, includes, availableSpots, departure, imageUrl } = req.body;
     const result = await pool.query(
-      'INSERT INTO travel_packets (title, location, duration, price, original_price, category, badge, description, includes, available_spots, departure) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *',
-      [title, location, duration, price, originalPrice, category, badge, description, includes, availableSpots, departure]
+      'INSERT INTO travel_packets (title, location, duration, price, original_price, category, badge, description, includes, available_spots, departure, image_url) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *',
+      [title, location, duration, price, originalPrice, category, badge, description, includes, availableSpots, departure, imageUrl]
     );
     res.json(result.rows[0]);
   } catch (error) {
@@ -197,10 +282,10 @@ app.post('/api/travel-packets', async (req, res) => {
 app.put('/api/travel-packets/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, location, duration, price, originalPrice, category, badge, description, includes, availableSpots, departure } = req.body;
+    const { title, location, duration, price, originalPrice, category, badge, description, includes, availableSpots, departure, imageUrl } = req.body;
     const result = await pool.query(
-      'UPDATE travel_packets SET title = $1, location = $2, duration = $3, price = $4, original_price = $5, category = $6, badge = $7, description = $8, includes = $9, available_spots = $10, departure = $11, updated_at = CURRENT_TIMESTAMP WHERE id = $12 RETURNING *',
-      [title, location, duration, price, originalPrice, category, badge, description, includes, availableSpots, departure, id]
+      'UPDATE travel_packets SET title = $1, location = $2, duration = $3, price = $4, original_price = $5, category = $6, badge = $7, description = $8, includes = $9, available_spots = $10, departure = $11, image_url = $12, updated_at = CURRENT_TIMESTAMP WHERE id = $13 RETURNING *',
+      [title, location, duration, price, originalPrice, category, badge, description, includes, availableSpots, departure, imageUrl, id]
     );
     res.json(result.rows[0]);
   } catch (error) {

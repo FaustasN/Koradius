@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { LogOut, Settings, Image, MessageSquare, Clock, Plus, Edit, Trash2, Eye, Bell, Package, Database } from 'lucide-react';
+import ImageUpload from '../components/ImageUpload';
 
 // Types for our data structures
 interface GalleryItem {
@@ -80,7 +81,8 @@ const DashboardPage = () => {
     description: '',
     includes: '',
     availableSpots: '',
-    departure: ''
+    departure: '',
+    imageUrl: ''
   });
 
   // Notifications state
@@ -389,7 +391,8 @@ const DashboardPage = () => {
       description: '',
       includes: '',
       availableSpots: '',
-      departure: ''
+      departure: '',
+      imageUrl: ''
     });
     setShowPacketModal(true);
   };
@@ -407,7 +410,8 @@ const DashboardPage = () => {
       description: packet.description,
       includes: packet.includes.join(', '),
       availableSpots: packet.availableSpots.toString(),
-      departure: packet.departure
+      departure: packet.departure,
+      imageUrl: packet.imageUrl
     });
     setShowPacketModal(true);
   };
@@ -858,12 +862,12 @@ const DashboardPage = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nuotraukos URL</label>
-                <input
-                  type="url"
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nuotrauka</label>
+                <ImageUpload
                   value={galleryFormData.imageUrl}
-                  onChange={(e) => setGalleryFormData({...galleryFormData, imageUrl: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  onChange={(url) => setGalleryFormData({...galleryFormData, imageUrl: url})}
+                  uploadType="gallery"
+                  placeholder="Įkelkite nuotrauką arba įveskite URL"
                 />
               </div>
               <div>
@@ -985,6 +989,15 @@ const DashboardPage = () => {
                   value={packetFormData.departure}
                   onChange={(e) => setPacketFormData({...packetFormData, departure: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nuotrauka</label>
+                <ImageUpload
+                  value={packetFormData.imageUrl}
+                  onChange={(url) => setPacketFormData({...packetFormData, imageUrl: url})}
+                  uploadType="travel-packets"
+                  placeholder="Įkelkite kelionės nuotrauką arba įveskite URL"
                 />
               </div>
               <div className="md:col-span-2">
