@@ -1,103 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, ChevronLeft, ChevronRight, MapPin, Camera } from 'lucide-react';
+import { galleryApi, transformGalleryItem } from '../services/apiService';
 
 const Gallery = () => {
   const navigate = useNavigate();
   const [selectedImage, setSelectedImage] = useState<number | null>(null);
   const [activeFilter, setActiveFilter] = useState('all');
+  
+  // Database state
+  const [images, setImages] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Load gallery images from database
+  useEffect(() => {
+    const loadGalleryImages = async () => {
+      try {
+        setLoading(true);
+        const galleryItems = await galleryApi.getAll();
+        const transformedImages = galleryItems.map(transformGalleryItem);
+        // Get first 12 images for homepage gallery
+        setImages(transformedImages.slice(0, 12));
+      } catch (err) {
+        console.error('Error loading gallery images:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadGalleryImages();
+  }, []);
 
   const handlePlanTrip = () => {
     navigate('/search');
   };
 
-  const images = [
-    {
-      id: 1,
-      src: "https://images.pexels.com/photos/1371360/pexels-photo-1371360.jpeg?auto=compress&cs=tinysrgb&w=800",
-      location: "Maldivai",
-      category: "beach",
-      title: "Kristalinio vandens lagūna"
-    },
-    {
-      id: 2,
-      src: "https://images.pexels.com/photos/161853/eiffel-tower-paris-france-tower-161853.jpeg?auto=compress&cs=tinysrgb&w=800",
-      location: "Paryžius",
-      category: "city",
-      title: "Eifelio bokštas saulėlydyje"
-    },
-    {
-      id: 3,
-      src: "https://images.pexels.com/photos/1433052/pexels-photo-1433052.jpeg?auto=compress&cs=tinysrgb&w=800",
-      location: "Islandija",
-      category: "nature",
-      title: "Šiaurės pašvaistė"
-    },
-    {
-      id: 4,
-      src: "https://images.pexels.com/photos/2506923/pexels-photo-2506923.jpeg?auto=compress&cs=tinysrgb&w=800",
-      location: "Tokijas",
-      category: "city",
-      title: "Naktinis miesto vaizdas"
-    },
-    {
-      id: 5,
-      src: "https://images.pexels.com/photos/161815/santorini-travel-greece-island-161815.jpeg?auto=compress&cs=tinysrgb&w=800",
-      location: "Santorini",
-      category: "beach",
-      title: "Baltieji namai ir mėlynas jūra"
-    },
-    {
-      id: 6,
-      src: "https://images.pexels.com/photos/1470405/pexels-photo-1470405.jpeg?auto=compress&cs=tinysrgb&w=800",
-      location: "Dubajus",
-      category: "city",
-      title: "Dangoraižių mišklas"
-    },
-    {
-      id: 7,
-      src: "https://images.pexels.com/photos/2474690/pexels-photo-2474690.jpeg?auto=compress&cs=tinysrgb&w=800",
-      location: "Bali",
-      category: "nature",
-      title: "Tropinė džiunglė"
-    },
-    {
-      id: 8,
-      src: "https://images.pexels.com/photos/1174732/pexels-photo-1174732.jpeg?auto=compress&cs=tinysrgb&w=800",
-      location: "Tenerifė",
-      category: "beach",
-      title: "Vulkaninis paplūdimys"
-    },
-    {
-      id: 9,
-      src: "https://images.pexels.com/photos/2064827/pexels-photo-2064827.jpeg?auto=compress&cs=tinysrgb&w=800",
-      location: "Roma",
-      category: "city",
-      title: "Koliziejus"
-    },
-    {
-      id: 10,
-      src: "https://images.pexels.com/photos/1287460/pexels-photo-1287460.jpeg?auto=compress&cs=tinysrgb&w=800",
-      location: "Maldivai",
-      category: "beach",
-      title: "Vandens vila"
-    },
-    {
-      id: 11,
-      src: "https://images.pexels.com/photos/1486222/pexels-photo-1486222.jpeg?auto=compress&cs=tinysrgb&w=800",
-      location: "Stambulas",
-      category: "city",
-      title: "Aya Sofija"
-    },
-    {
-      id: 12,
-      src: "https://images.pexels.com/photos/1701595/pexels-photo-1701595.jpeg?auto=compress&cs=tinysrgb&w=800",
-      location: "Budapeštas",
-      category: "city",
-      title: "Parlamentas prie Dunojaus"
-    }
-  ];
-
+  // Fallback images data in case the API is not available
   const filters = [
     { id: 'all', label: 'Visos nuotraukos', icon: Camera },
     { id: 'beach', label: 'Paplūdimiai', icon: Camera },
@@ -176,7 +114,13 @@ const Gallery = () => {
         </div>
 
         {/* Gallery Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
+            <span className="ml-3 text-gray-600">Kraunamos nuotraukos...</span>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {filteredImages.map((image, index) => (
             <div
               key={image.id}
@@ -208,6 +152,7 @@ const Gallery = () => {
             </div>
           ))}
         </div>
+        )}
 
         {/* Lightbox */}
         {selectedImage && selectedImageData && (

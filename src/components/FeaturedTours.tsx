@@ -1,9 +1,33 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MapPin, Clock, Star, ArrowRight } from 'lucide-react';
+import { travelPacketsApi, transformTravelPacket } from '../services/apiService';
 
 const FeaturedTours = () => {
   const navigate = useNavigate();
+  
+  // Database state
+  const [tours, setTours] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Load featured tours from database
+  useEffect(() => {
+    const loadFeaturedTours = async () => {
+      try {
+        setLoading(true);
+        const packets = await travelPacketsApi.getAll();
+        const transformedTours = packets.map(transformTravelPacket);
+        // Get first 3 tours as featured
+        setTours(transformedTours.slice(0, 3));
+      } catch (err) {
+        console.error('Error loading featured tours:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadFeaturedTours();
+  }, []);
 
   const handleBookNow = (tourId: number) => {
     navigate(`/search?tour=${tourId}`);
@@ -12,54 +36,6 @@ const FeaturedTours = () => {
   const handleMoreInfo = (tourId: number) => {
     navigate(`/search?tour=${tourId}&details=true`);
   };
-
-  const featuredTours = [
-    {
-      id: 1,
-      title: "Romantiškas savaitgalis Paryžiuje",
-      location: "Prancūzija",
-      duration: "3 dienos",
-      price: "450",
-      originalPrice: "520",
-      rating: 4.9,
-      reviews: 127,
-      image: "https://images.pexels.com/photos/161853/eiffel-tower-paris-france-tower-161853.jpeg?auto=compress&cs=tinysrgb&w=800",
-      badge: "Top",
-      description: "Atraskite meilės miestą su mūsų kruopščiai paruoštu maršrutu",
-      includes: ["Skrydžiai", "3* viešbutis", "Pusryčiai", "Gidas"],
-      availableSpots: 8
-    },
-    {
-      id: 2,
-      title: "Saulėtas poilsis Tenerifėje",
-      location: "Ispanija",
-      duration: "7 dienos",
-      price: "680",
-      originalPrice: "750",
-      rating: 4.8,
-      reviews: 89,
-      image: "https://images.pexels.com/photos/1174732/pexels-photo-1174732.jpeg?auto=compress&cs=tinysrgb&w=800",
-      badge: "Akcija",
-      description: "Tropinis rojus su nuostabiais paplūdimiais ir šiltu oru",
-      includes: ["Skrydžiai", "4* viešbutis", "All inclusive", "Transferai"],
-      availableSpots: 12
-    },
-    {
-      id: 3,
-      title: "Plaukų transplantacija Stambule",
-      location: "Turkija",
-      duration: "5 dienos",
-      price: "1200",
-      originalPrice: "1400",
-      rating: 4.7,
-      reviews: 156,
-      image: "https://images.pexels.com/photos/1486222/pexels-photo-1486222.jpeg?auto=compress&cs=tinysrgb&w=800",
-      badge: "Populiaru",
-      description: "Profesionalus medicininis turizmas su aukščiausios kokybės paslaugomis",
-      includes: ["Skrydžiai", "5* viešbutis", "Procedūra", "Aftercare"],
-      availableSpots: 3
-    }
-  ];
 
   const getBadgeColor = (badge: string) => {
     switch (badge) {
@@ -86,8 +62,14 @@ const FeaturedTours = () => {
 
 
         {/* Tours Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-          {featuredTours.map((tour) => (
+        {loading ? (
+          <div className="flex items-center justify-center py-16">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
+            <span className="ml-3 text-gray-600">Kraunamos kelionės...</span>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+            {tours.map((tour: any) => (
             <div
               key={tour.id}
               className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 group"
@@ -156,9 +138,9 @@ const FeaturedTours = () => {
                 <div className="mb-6">
                   <h4 className="font-semibold text-gray-800 mb-2">Įskaičiuota:</h4>
                   <div className="flex flex-wrap gap-2">
-                    {tour.includes.map((item, index) => (
+                    {tour.includes.map((item: string, index: number) => (
                       <span
-                        key={index}
+                        key={`${tour.id}-include-${index}`}
                         className="bg-teal-50 text-teal-700 px-3 py-1 rounded-full text-sm font-medium"
                       >
                         {item}
@@ -186,6 +168,7 @@ const FeaturedTours = () => {
             </div>
           ))}
         </div>
+        )}
 
         {/* View All Button */}
         <div className="text-center">
