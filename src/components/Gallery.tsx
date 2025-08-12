@@ -8,7 +8,7 @@ const Gallery = () => {
   const [activeFilter, setActiveFilter] = useState('all');
 
   const handlePlanTrip = () => {
-    navigate('/tours');
+    navigate('/search');
   };
 
   const images = [

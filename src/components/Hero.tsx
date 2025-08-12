@@ -27,19 +27,29 @@ const Hero = () => {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 container mx-auto px-4 text-center">
+      <div className="relative z-10 container mx-auto px-4 text-center -mt-16">
         <div className="max-w-4xl mx-auto">
           {/* Main Heading */}
-          <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
+          <h1 className="text-5xl md:text-7xl font-bold text-white mb-8 leading-tight tracking-wide" style={{ 
+            fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+            textRendering: 'optimizeLegibility',
+            WebkitFontSmoothing: 'antialiased',
+            MozOsxFontSmoothing: 'grayscale'
+          }}>
             Atrask savo
-            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-yellow-400">
+            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-yellow-400 mt-2" style={{ 
+              fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+              textRendering: 'optimizeLegibility',
+              WebkitFontSmoothing: 'antialiased',
+              MozOsxFontSmoothing: 'grayscale'
+            }}>
               geriausią kelionę
             </span>
           </h1>
 
           {/* Subtitle */}
-          <p className="text-xl md:text-2xl text-white/90 mb-12 leading-relaxed">
-            Sukuriame nepamirštamus kelionių išgyvenimus jau daugiau nei 15 metų. 
+          <p className="text-xl md:text-2xl text-white/90 mb-16 leading-relaxed max-w-3xl mx-auto">
+            Sukuriame nepamirštamus kelionių išgyvenimus jau daugiau nei 7 metus. 
             Leiskite mums padėti jums atrasti pasaulio grožį.
           </p>
 

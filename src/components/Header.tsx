@@ -53,39 +53,6 @@ const Header = () => {
             >
               Pradžia
             </Link>
-            
-            <div className="relative group">
-              <Link
-                to="/tours"
-                className={`px-4 py-2 rounded-lg font-semibold transition-all duration-300 flex items-center btn-hover-smooth ${
-                  isActive('/tours') 
-                    ? 'bg-teal-100 text-teal-700' 
-                    : 'text-gray-700 hover:bg-teal-50 hover:text-teal-600'
-                }`}
-              >
-                Kelionės
-                <svg className="w-4 h-4 ml-1 transform group-hover:rotate-180 transition-transform duration-300" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-              </Link>
-              
-              <div className="absolute top-full left-0 mt-2 w-72 bg-white rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 border border-gray-100">
-                <div className="py-3">
-                  <Link to="/tours?category=weekend" className="block px-6 py-3 text-gray-700 hover:bg-teal-50 hover:text-teal-600 transition-colors duration-200 font-medium">
-                    Savaitgalio kelionės
-                  </Link>
-                  <Link to="/tours?category=vacation" className="block px-6 py-3 text-gray-700 hover:bg-teal-50 hover:text-teal-600 transition-colors duration-200 font-medium">
-                    Poilsinės kelionės
-                  </Link>
-                  <Link to="/tours?category=medical" className="block px-6 py-3 text-gray-700 hover:bg-teal-50 hover:text-teal-600 transition-colors duration-200 font-medium">
-                    Medicininis turizmas
-                  </Link>
-                  <Link to="/destinations" className="block px-6 py-3 text-gray-700 hover:bg-teal-50 hover:text-teal-600 transition-colors duration-200 font-medium">
-                    Populiarios kryptys
-                  </Link>
-                </div>
-              </div>
-            </div>
             <Link 
               to="/search"
               className={`px-4 py-2 rounded-lg font-semibold transition-all duration-300 btn-hover-smooth ${
@@ -141,10 +108,13 @@ const Header = () => {
           {/* Right side buttons */}
           <div className="flex items-center space-x-3">
             {/* Emergency Contact */}
-            <div className="hidden md:flex items-center space-x-2 bg-red-50 text-red-700 px-3 py-2 rounded-lg border border-red-200">
-              <Phone size={16} />
-              <span className="text-sm font-semibold">24/7: +370 694 98078</span>
-            </div>
+            <a 
+              href="tel:+37069498078"
+              className="hidden md:flex items-center space-x-2 bg-red-50 hover:bg-red-100 text-red-700 hover:text-red-800 px-4 py-2.5 rounded-lg border border-red-200 hover:border-red-300 transition-all duration-300 transform hover:scale-105 hover:shadow-lg cursor-pointer group"
+            >
+              <Phone size={16} className="group-hover:animate-pulse" />
+              <span className="text-sm font-semibold whitespace-nowrap">24/7: +370 694 98078</span>
+            </a>
 
 
             {/* Language Selector */}
@@ -191,12 +161,6 @@ const Header = () => {
             <Link to="/" className="block py-3 px-4 text-gray-700 hover:bg-teal-50 hover:text-teal-600 rounded-lg transition-colors duration-200 font-medium btn-hover-smooth">
               Pradžia
             </Link>
-            <Link to="/tours" className="block py-3 px-4 text-gray-700 hover:bg-teal-50 hover:text-teal-600 rounded-lg transition-colors duration-200 font-medium btn-hover-smooth">
-              Kelionės
-            </Link>
-            <Link to="/destinations" className="block py-3 px-4 text-gray-700 hover:bg-teal-50 hover:text-teal-600 rounded-lg transition-colors duration-200 font-medium btn-hover-smooth">
-              Populiarios kryptys
-            </Link>
             <Link to="/gallery" className="block py-3 px-4 text-gray-700 hover:bg-teal-50 hover:text-teal-600 rounded-lg transition-colors duration-200 font-medium btn-hover-smooth">
               Galerija
             </Link>
@@ -205,6 +169,16 @@ const Header = () => {
             </Link>
             <Link to="/about" className="block py-3 px-4 text-gray-700 hover:bg-teal-50 hover:text-teal-600 rounded-lg transition-colors duration-200 font-medium btn-hover-smooth">
               Apie mus
+            </Link>
+            <Link 
+              to="/search"
+              className={`px-4 py-2 rounded-lg font-semibold transition-all duration-300 btn-hover-smooth ${
+                isActive('/search') 
+                  ? 'bg-teal-100 text-teal-700' 
+                  : 'text-gray-700 hover:bg-teal-50 hover:text-teal-600'
+              }`}
+            >
+              Ieškoti kelionių
             </Link>
             <Link to="/contact" className="block py-3 px-4 text-gray-700 hover:bg-teal-50 hover:text-teal-600 rounded-lg transition-colors duration-200 font-medium btn-hover-smooth">
               Kontaktai
