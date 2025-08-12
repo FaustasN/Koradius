@@ -2,8 +2,6 @@ import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import Layout from './components/Layout';
 import HomePage from './pages/HomePage';
-
-
 import GalleryPage from './pages/GalleryPage';
 import ReviewsPage from './pages/ReviewsPage';
 import AboutPage from './pages/AboutPage';
@@ -11,6 +9,7 @@ import ContactPage from './pages/ContactPage';
 import DashboardLoginPage from './pages/DashboardLoginPage';
 import DashboardPage from './pages/DashboardPage';
 import ProtectedRoute from './components/ProtectedRoute';
+import SearchPage from './pages/SearchPage';
 
 const App = () => {
   return (
@@ -23,6 +22,7 @@ const App = () => {
           <Route path="reviews" element={<ReviewsPage />} />
           <Route path="about" element={<AboutPage />} />
           <Route path="contact" element={<ContactPage />} />
+          <Route path="search" element={<SearchPage />} />
         </Route>
         
 
