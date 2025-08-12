@@ -356,21 +356,9 @@ const GalleryPage = () => {
           <Camera size={64} className="mx-auto mb-6 opacity-80" />
           <h2 className="text-3xl font-bold mb-4">Pasidalinkite savo kelionių nuotraukomis</h2>
           <p className="text-xl opacity-90 mb-8 max-w-2xl mx-auto">
-            Norite, kad jūsų nuotraukos atsidurtų mūsų galerijoje? Siųskite jas mums ir įkvėpkite kitus keliautojus!
+            Norite, kad jūsų nuotraukos atsidurtų mūsų galerijoje? Siųskite jas mums į <a href="koradiustravel@gmail.com" className="text-white hover:text-teal-100">koradiustravel@gmail.com</a> ir įkvėpkite kitus keliautojus!
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button 
-              onClick={handleUploadPhotos}
-              className="bg-white hover:bg-gray-100 text-teal-600 font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg"
-            >
-              Įkelti nuotraukas
-            </button>
-            <button 
-              onClick={handleLearnMore}
-              className="border-2 border-white hover:bg-white hover:text-teal-600 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105"
-            >
-              Sužinoti daugiau
-            </button>
           </div>
         </div>
 
@@ -409,12 +397,7 @@ const GalleryPage = () => {
           </div>
           
           <div className="text-center mt-8">
-            <button 
-              onClick={handleParticipateContest}
-              className="bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg btn-hover-smooth"
-            >
-              Dalyvauti konkurse
-            </button>
+          
           </div>
         </div>
       </div>

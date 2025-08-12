@@ -1,12 +1,72 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Star, ChevronLeft, ChevronRight, Quote, Filter, Calendar, MapPin, ThumbsUp, ChevronDown } from 'lucide-react';
+import { Star, ChevronLeft, ChevronRight, Quote, Filter, Calendar, MapPin, ThumbsUp, ChevronDown, X, Send } from 'lucide-react';
 
 const ReviewsPage = () => {
   const navigate = useNavigate();
 
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewForm, setReviewForm] = useState({
+    name: '',
+    rating: 0,
+    description: '',
+    date: new Date().toISOString().split('T')[0]
+  });
+
   const handleWriteReview = () => {
-    navigate('/contact?subject=Rašyti atsiliepimą');
+    setShowReviewForm(true);
+  };
+
+  const handleCloseReviewForm = () => {
+    setShowReviewForm(false);
+    setReviewForm({
+      name: '',
+      rating: 0,
+      description: '',
+      date: new Date().toISOString().split('T')[0]
+    });
+  };
+
+  const handleRatingChange = (rating: number) => {
+    setReviewForm(prev => ({ ...prev, rating }));
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setReviewForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmitReview = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (reviewForm.name && reviewForm.rating > 0 && reviewForm.description) {
+      // Čia galėtumėte išsiųsti atsiliepimą į serverį
+      console.log('Naujas atsiliepimas:', reviewForm);
+      
+      // Pridėti atsiliepimą į lokalų masyvą (demo tikslais)
+      const newReview = {
+        id: reviews.length + 1,
+        name: reviewForm.name,
+        age: 0, // Demo tikslais
+        location: "Lietuva",
+        rating: reviewForm.rating,
+        text: reviewForm.description,
+        trip: "Naujas atsiliepimas",
+        image: "https://images.pexels.com/photos/1181686/pexels-photo-1181686.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop",
+        date: reviewForm.date,
+        category: "vacation",
+        helpful: 0,
+        verified: false
+      };
+      
+      // Pridėti atsiliepimą į masyvą (realioje aplikacijoje tai būtų išsaugota serveryje)
+      reviews.unshift(newReview);
+      
+      // Uždaryti formą
+      handleCloseReviewForm();
+      
+      // Parodyti pranešimą (galite pridėti toast notification)
+      alert('Ačiū už jūsų atsiliepimą!');
+    }
   };
 
   const [currentReview, setCurrentReview] = useState(0);
@@ -450,6 +510,87 @@ const ReviewsPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Review Form Modal */}
+      {showReviewForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-2xl font-bold text-gray-800">Rašyti atsiliepimą</h3>
+              <button onClick={handleCloseReviewForm} className="text-gray-500 hover:text-gray-700">
+                <X size={24} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitReview} className="space-y-4">
+              <div>
+                <label htmlFor="name" className="block text-sm font-semibold text-gray-700 mb-1">
+                  Vardas
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  value={reviewForm.name}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="rating" className="block text-sm font-semibold text-gray-700 mb-1">
+                  Įvertinimas
+                </label>
+                <div className="flex items-center space-x-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star
+                      key={star}
+                      size={24}
+                      className={`cursor-pointer ${
+                        star <= reviewForm.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
+                      }`}
+                      onClick={() => handleRatingChange(star)}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="description" className="block text-sm font-semibold text-gray-700 mb-1">
+                  Atsiliepimas
+                </label>
+                <textarea
+                  id="description"
+                  name="description"
+                  value={reviewForm.description}
+                  onChange={handleInputChange}
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div className="flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={handleCloseReviewForm}
+                  className="px-4 py-2 rounded-lg text-gray-700 border border-gray-300 hover:bg-gray-100 transition-colors duration-300"
+                >
+                  Atšaukti
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-lg bg-teal-600 text-white hover:bg-teal-700 transition-colors duration-300"
+                >
+                  Siųsti atsiliepimą
+                  <Send className="ml-2" size={16} />
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
