@@ -8,7 +8,6 @@ import GalleryPage from './pages/GalleryPage';
 import ReviewsPage from './pages/ReviewsPage';
 import AboutPage from './pages/AboutPage';
 import ContactPage from './pages/ContactPage';
-import SearchPage from './pages/SearchPage';
 import DashboardLoginPage from './pages/DashboardLoginPage';
 import DashboardPage from './pages/DashboardPage';
 import ProtectedRoute from './components/ProtectedRoute';
