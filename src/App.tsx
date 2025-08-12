@@ -11,6 +11,7 @@ import ContactPage from './pages/ContactPage';
 import DashboardLoginPage from './pages/DashboardLoginPage';
 import DashboardPage from './pages/DashboardPage';
 import ProtectedRoute from './components/ProtectedRoute';
+import SearchPage from './pages/SearchPage';
 
 const App = () => {
   return (
@@ -23,6 +24,7 @@ const App = () => {
           <Route path="reviews" element={<ReviewsPage />} />
           <Route path="about" element={<AboutPage />} />
           <Route path="contact" element={<ContactPage />} />
+          <Route path="search" element={<SearchPage />} />
         </Route>
         
 

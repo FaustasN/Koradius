@@ -18,7 +18,7 @@ const SearchPage = () => {
   const [reloadKey, setReloadKey] = useState(Date.now());
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const timeoutRef = useRef<number | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scriptRef = useRef<HTMLScriptElement | null>(null);
 
   useEffect(() => {
