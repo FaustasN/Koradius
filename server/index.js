@@ -26,13 +26,92 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-// Test database connection
-pool.query('SELECT NOW()', (err, res) => {
+// Database schema initialization
+const initializeDatabase = async () => {
+  try {
+    console.log('🔄 Initializing database schema...');
+    
+    // Create tables if they don't exist
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS gallery (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        location VARCHAR(255) NOT NULL,
+        category VARCHAR(100) NOT NULL,
+        image_url TEXT NOT NULL,
+        photographer VARCHAR(255) NOT NULL,
+        date DATE DEFAULT CURRENT_DATE,
+        likes INTEGER DEFAULT 0,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS travel_packets (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        location VARCHAR(255) NOT NULL,
+        duration VARCHAR(100) NOT NULL,
+        price DECIMAL(10,2) NOT NULL,
+        original_price DECIMAL(10,2),
+        rating DECIMAL(3,2) DEFAULT 0,
+        reviews INTEGER DEFAULT 0,
+        image_url TEXT NOT NULL,
+        category VARCHAR(100) NOT NULL,
+        badge VARCHAR(100),
+        description TEXT,
+        includes TEXT[],
+        available_spots INTEGER DEFAULT 0,
+        departure DATE,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id SERIAL PRIMARY KEY,
+        type VARCHAR(50) NOT NULL CHECK (type IN ('review', 'order', 'system')),
+        title VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        is_read BOOLEAN DEFAULT false,
+        priority VARCHAR(20) DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Create indexes for better performance
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_gallery_category ON gallery(category)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_gallery_active ON gallery(is_active)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_travel_packets_category ON travel_packets(category)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_travel_packets_active ON travel_packets(is_active)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_notifications_type ON notifications(type)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(is_read)');
+
+    console.log('✅ Database schema initialized successfully');
+  } catch (error) {
+    console.error('❌ Database schema initialization failed:', error.message);
+    throw error;
+  }
+};
+
+// Test database connection and initialize schema
+pool.query('SELECT NOW()', async (err, res) => {
   if (err) {
     console.error('❌ Database connection failed:', err.message);
     console.log('⚠️  Server will start but database operations will fail');
   } else {
     console.log('✅ Database connected successfully');
+    // Initialize database schema after successful connection
+    try {
+      await initializeDatabase();
+    } catch (initError) {
+      console.error('❌ Database initialization failed:', initError.message);
+    }
   }
 });
 
