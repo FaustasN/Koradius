@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { authAPI } from '../services/adminApiService';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -100,26 +101,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const login = async (username: string, password: string): Promise<boolean> => {
-    // Get credentials from environment variables with fallbacks
-    const adminUsername = import.meta.env.VITE_ADMIN_USERNAME || 'admin';
-    const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD || 'admin123';
-    
-    // For now, using environment-based credentials
-    // In a real app, this would be an API call to validate against a database
-    if (username === adminUsername && password === adminPassword) {
-      const payload = {
-        username: adminUsername,
-        role: 'admin',
-        iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours from now
-      };
+    try {
+      const data = await authAPI.login(username, password);
+      const token = data.token;
       
-      const token = generateJWT(payload);
+      // Store token in cookie
       setCookie('adminToken', token, 1); // 1 day
       setIsAuthenticated(true);
       return true;
+    } catch (error) {
+      console.error('Login error:', error);
+      return false;
     }
-    return false;
   };
 
   const logout = () => {
