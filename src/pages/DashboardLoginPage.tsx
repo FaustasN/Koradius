@@ -147,14 +147,6 @@ const DashboardLoginPage = () => {
             </button>
           </form>
 
-          {/* Demo Credentials */}
-          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-            <h3 className="text-sm font-semibold text-blue-800 mb-2">Demo prisijungimo duomenys:</h3>
-            <div className="text-sm text-blue-700 space-y-1">
-              <p><strong>Vartotojo vardas:</strong> admin</p>
-              <p><strong>Slaptažodis:</strong> admin123</p>
-            </div>
-          </div>
         </div>
 
         {/* Back to Home */}

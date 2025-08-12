@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Settings, Image, MessageSquare, Clock, Plus, Edit, Trash2, Eye, Bell, Package, Database, Search, Filter, Star, Phone, Mail, User } from 'lucide-react';
+import { LogOut, Settings, Image, MessageSquare, Clock, Plus, Edit, Trash2, Eye, Bell, Package, Database, Search, Filter, Star, Phone, Mail, User, Home } from 'lucide-react';
 import ImageUpload from '../components/ImageUpload';
 import { notificationsAPI, contactsAPI, reviewsAPI, galleryAPI, travelPacketsAPI } from '../services/adminApiService';
 
@@ -93,8 +93,9 @@ const DashboardPage = () => {
   const navigate = useNavigate();
   const [userInfo, setUserInfo] = useState<{ username: string; role: string; exp: number } | null>(null);
   const [timeUntilExpiry, setTimeUntilExpiry] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'gallery' | 'packets' | 'notifications' | 'messages'>('notifications');
+  const [activeTab, setActiveTab] = useState<'gallery' | 'packets' | 'messages'>('gallery');
   const [isLoading, setIsLoading] = useState(false);
+  const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
 
   // Data state
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -229,6 +230,19 @@ const DashboardPage = () => {
       return () => clearInterval(notificationInterval);
     }
   }, [isAuthenticated]);
+
+  // Close notifications dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (showNotificationsDropdown && !target.closest('.notifications-dropdown')) {
+        setShowNotificationsDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showNotificationsDropdown]);
 
   const loadAllData = async () => {
     setIsLoading(true);
@@ -473,6 +487,10 @@ const DashboardPage = () => {
     navigate('/dashboard/login');
   };
 
+  const handleGoToHome = () => {
+    navigate('/');
+  };
+
   // Gallery functions
   const handleAddGalleryItem = () => {
     setSelectedGalleryItem(null);
@@ -689,6 +707,92 @@ const DashboardPage = () => {
                   <span>{timeUntilExpiry}</span>
                 </div>
               </div>
+              
+              {/* Notifications Dropdown */}
+              <div className="relative notifications-dropdown">
+                <button
+                  onClick={() => setShowNotificationsDropdown(!showNotificationsDropdown)}
+                  className="relative flex items-center space-x-2 px-3 py-2 bg-gray-50 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+                >
+                  <Bell className="h-4 w-4" />
+                  {unreadCount > 0 && (
+                    <span className={`absolute -top-1 -right-1 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[18px] text-center ${
+                      hasNewNotifications 
+                        ? 'bg-red-500 animate-pulse' 
+                        : 'bg-red-500'
+                    }`}>
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+                
+                {/* Notifications Dropdown */}
+                {showNotificationsDropdown && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-96 overflow-y-auto">
+                    <div className="p-4 border-b border-gray-200">
+                      <h3 className="text-lg font-semibold text-gray-900">Pranešimai</h3>
+                      {unreadCount > 0 && (
+                        <p className="text-sm text-gray-500">{unreadCount} neperskaityti</p>
+                      )}
+                    </div>
+                    <div className="max-h-80 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="p-4 text-center text-gray-500">
+                          <Bell className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                          <p>Nėra pranešimų</p>
+                        </div>
+                      ) : (
+                        <div className="divide-y divide-gray-100">
+                          {notifications.slice(0, 10).map((notification) => (
+                            <div
+                              key={notification.id}
+                              className={`p-4 hover:bg-gray-50 transition-colors duration-200 cursor-pointer ${
+                                !notification.isRead ? 'bg-blue-50' : ''
+                              }`}
+                              onClick={() => markNotificationAsRead(notification.id)}
+                            >
+                              <div className="flex items-start space-x-3">
+                                <div className={`p-1 rounded-full ${getPriorityColor(notification.priority)}`}>
+                                  {getTypeIcon(notification.type)}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between">
+                                    <h4 className="text-sm font-medium text-gray-900 truncate">
+                                      {notification.title}
+                                    </h4>
+                                    <span className="text-xs text-gray-500 ml-2">
+                                      {new Date(notification.timestamp).toLocaleDateString('lt-LT')}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                                    {notification.message}
+                                  </p>
+                                  {!notification.isRead && (
+                                    <div className="flex items-center mt-2">
+                                      <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+                                      <span className="text-xs text-blue-600 font-medium">Nauja</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Home Button */}
+              <button
+                onClick={handleGoToHome}
+                className="flex items-center space-x-2 px-4 py-2 bg-teal-50 text-teal-700 rounded-lg hover:bg-teal-100 transition-colors duration-200"
+              >
+                <Home className="h-4 w-4" />
+                <span>Pagrindinis</span>
+              </button>
+              
               <button
                 onClick={handleLogout}
                 className="flex items-center space-x-2 px-4 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors duration-200"
@@ -794,28 +898,6 @@ const DashboardPage = () => {
               <div className="flex items-center justify-center space-x-2">
                 <MessageSquare className="h-5 w-5" />
                 <span>Žinutės</span>
-              </div>
-            </button>
-            <button
-              onClick={() => setActiveTab('notifications')}
-              className={`flex-1 px-6 py-4 text-sm font-medium transition-colors duration-200 ${
-                activeTab === 'notifications'
-                  ? 'text-teal-600 border-b-2 border-teal-600 bg-teal-50'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              <div className="flex items-center justify-center space-x-2">
-                <Bell className="h-5 w-5" />
-                                 <span>Pranešimai</span>
-                 {unreadCount > 0 && (
-                   <span className={`text-white text-xs rounded-full px-2 py-1 min-w-[20px] ${
-                     hasNewNotifications 
-                       ? 'bg-red-500 animate-pulse' 
-                       : 'bg-red-500'
-                   }`}>
-                     {unreadCount}
-                   </span>
-                 )}
               </div>
             </button>
           </div>
@@ -1158,56 +1240,6 @@ const DashboardPage = () => {
                   </div>
                 )}
 
-                {/* Notifications Tab */}
-                {activeTab === 'notifications' && (
-                  <div>
-                    <div className="flex justify-between items-center mb-6">
-                      <h3 className="text-xl font-semibold text-gray-900">Pranešimai</h3>
-                      <button
-                        onClick={loadNotifications}
-                        className="text-teal-600 hover:text-teal-800 text-sm font-medium"
-                      >
-                        Atnaujinti
-                      </button>
-                    </div>
-
-                    <div className="space-y-4">
-                      {notifications.map((notification) => (
-                        <div
-                          key={notification.id}
-                          className={`p-4 rounded-lg border transition-colors duration-200 ${
-                            notification.isRead
-                              ? 'bg-gray-50 border-gray-200'
-                              : 'bg-white border-teal-200 shadow-sm'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-start space-x-3">
-                              <div className={`p-2 rounded-lg ${getPriorityColor(notification.priority)}`}>
-                                {getTypeIcon(notification.type)}
-                              </div>
-                              <div className="flex-1">
-                                <h4 className="font-semibold text-gray-900 mb-1">{notification.title}</h4>
-                                <p className="text-sm text-gray-600 mb-2">{notification.message}</p>
-                                <p className="text-xs text-gray-500">
-                                  {new Date(notification.timestamp).toLocaleString('lt-LT')}
-                                </p>
-                              </div>
-                            </div>
-                            {!notification.isRead && (
-                              <button
-                                onClick={() => markNotificationAsRead(notification.id)}
-                                className="text-teal-600 hover:text-teal-800 text-sm font-medium"
-                              >
-                                Pažymėti kaip perskaitytą
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </>
             )}
           </div>
