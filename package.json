@@ -7,15 +7,11 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "db:init": "tsx src/scripts/initDatabase.ts",
-    "db:test": "tsx -e \"import('./src/services/database').then(db => db.initializeDatabase().then(() => console.log('✅ Database connection successful!')).catch(console.error))\""
+    "preview": "vite preview"
   },
   "dependencies": {
-    "@types/pg": "^8.15.5",
     "framer-motion": "^12.23.12",
     "lucide-react": "^0.344.0",
-    "pg": "^8.16.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.6.3"
