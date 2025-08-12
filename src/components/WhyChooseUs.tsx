@@ -13,7 +13,7 @@ const WhyChooseUs = () => {
     {
       icon: Shield,
       title: "Patikimumas",
-      description: "15 metų patirtis, LTKIA narystė ir visapusiškas draudimas garantuoja jūsų saugumą.",
+      description: "7 metų patirtis, LTKIA narystė ir visapusiškas draudimas garantuoja jūsų saugumą.",
       color: "text-green-500",
       bgColor: "bg-green-50"
     },
@@ -56,7 +56,7 @@ const WhyChooseUs = () => {
             Kodėl rinktis <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-500 to-teal-600">mus?</span>
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            15 metų patirtis ir tūkstančiai patenkintų klientų kalba už mus
+            7 metų patirtis ir tūkstančiai patenkintų klientų kalba už mus
           </p>
         </div>
 

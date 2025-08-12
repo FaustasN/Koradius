@@ -6,11 +6,11 @@ const FeaturedTours = () => {
   const navigate = useNavigate();
 
   const handleBookNow = (tourId: number) => {
-    navigate(`/tours?tour=${tourId}`);
+    navigate(`/search?tour=${tourId}`);
   };
 
   const handleMoreInfo = (tourId: number) => {
-    navigate(`/tours?tour=${tourId}&details=true`);
+    navigate(`/search?tour=${tourId}&details=true`);
   };
 
   const featuredTours = [
@@ -74,7 +74,7 @@ const FeaturedTours = () => {
     <section className="py-20 bg-white">
       <div className="container mx-auto px-4">
         {/* Section Header */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-16">x
           <h2 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6">
             Išskirtinės <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-500 to-teal-600">kelionės</span>
           </h2>
@@ -190,7 +190,7 @@ const FeaturedTours = () => {
         {/* View All Button */}
         <div className="text-center">
           <Link
-            to="/tours"
+            to="/search"
             className="inline-flex items-center space-x-2 bg-white hover:bg-teal-50 text-teal-600 font-bold py-4 px-8 rounded-xl border-2 border-teal-500 hover:border-teal-600 transition-all duration-300 transform hover:scale-105 hover:shadow-lg btn-hover-smooth"
           >
             <span>Žiūrėti visas keliones</span>
