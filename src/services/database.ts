@@ -16,9 +16,9 @@ export interface DatabaseConfig {
 export const defaultConfig: DatabaseConfig = {
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432'),
-  database: process.env.DB_NAME || 'mydatabase',
-  user: process.env.DB_USER || 'myuser',
-  password: process.env.DB_PASSWORD || 'mypassword',
+  database: process.env.DB_NAME || 'koradius_db',
+  user: process.env.DB_USER || 'postgres',
+  password: process.env.DB_PASSWORD || '', // No default password for security
   ssl: process.env.NODE_ENV === 'production'
 };
 

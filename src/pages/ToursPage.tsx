@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, MapPin, Clock, Users, Star, Calendar, Euro, ChevronDown } from 'lucide-react';
+import { Search, MapPin, Clock, Star, Calendar, ChevronDown } from 'lucide-react';
 import NovaturIframe from '../components/NovaturIframe';
+import { travelPacketsApi, transformTravelPacket } from '../services/apiService';
 
 const ToursPage = () => {
   const navigate = useNavigate();
@@ -9,6 +10,31 @@ const ToursPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('popular');
   const [priceRange, setPriceRange] = useState([0, 2000]);
+  
+  // Database state
+  const [tours, setTours] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load tours from database
+  useEffect(() => {
+    const loadTours = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const packets = await travelPacketsApi.getAll();
+        const transformedTours = packets.map(transformTravelPacket);
+        setTours(transformedTours);
+      } catch (err) {
+        console.error('Error loading tours:', err);
+        setError('Failed to load tours. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTours();
+  }, []);
 
   const handleBookNow = (tourId: number) => {
     navigate(`/tours?tour=${tourId}`);
@@ -18,155 +44,11 @@ const ToursPage = () => {
     navigate(`/tours?tour=${tourId}&details=true`);
   };
 
-  const handleLoadMore = () => {
-    // Simulate loading more tours
-    console.log('Loading more tours...');
-  };
-
   const handleClearFilters = () => {
     setActiveFilter('all');
     setSearchTerm('');
     setPriceRange([0, 2000]);
   };
-
-  const tours = [
-    {
-      id: 1,
-      title: "Romantiškas savaitgalis Paryžiuje",
-      location: "Prancūzija",
-      duration: "3 dienos",
-      price: "450",
-      originalPrice: "520",
-      rating: 4.9,
-      reviews: 127,
-      image: "https://images.pexels.com/photos/161853/eiffel-tower-paris-france-tower-161853.jpeg?auto=compress&cs=tinysrgb&w=800",
-      category: "weekend",
-      badge: "Top",
-      description: "Atraskite meilės miestą su mūsų kruopščiai paruoštu maršrutu",
-      includes: ["Skrydžiai", "3* viešbutis", "Pusryčiai", "Gidas"],
-      availableSpots: 8,
-      departure: "2024-12-15"
-    },
-    {
-      id: 2,
-      title: "Saulėtas poilsis Tenerifėje",
-      location: "Ispanija",
-      duration: "7 dienos",
-      price: "680",
-      originalPrice: "750",
-      rating: 4.8,
-      reviews: 89,
-      image: "https://images.pexels.com/photos/1174732/pexels-photo-1174732.jpeg?auto=compress&cs=tinysrgb&w=800",
-      category: "vacation",
-      badge: "Akcija",
-      description: "Tropinis rojus su nuostabiais paplūdimiais ir šiltu oru",
-      includes: ["Skrydžiai", "4* viešbutis", "All inclusive", "Transferai"],
-      availableSpots: 12,
-      departure: "2024-12-20"
-    },
-    {
-      id: 3,
-      title: "Plaukų transplantacija Stambule",
-      location: "Turkija",
-      duration: "5 dienos",
-      price: "1200",
-      originalPrice: "1400",
-      rating: 4.7,
-      reviews: 156,
-      image: "https://images.pexels.com/photos/1486222/pexels-photo-1486222.jpeg?auto=compress&cs=tinysrgb&w=800",
-      category: "medical",
-      badge: "Populiaru",
-      description: "Profesionalus medicininis turizmas su aukščiausios kokybės paslaugomis",
-      includes: ["Skrydžiai", "5* viešbutis", "Procedūra", "Aftercare"],
-      availableSpots: 3,
-      departure: "2024-12-10"
-    },
-    {
-      id: 4,
-      title: "Magiškas Romos savaitgalis",
-      location: "Italija",
-      duration: "3 dienos",
-      price: "520",
-      originalPrice: "580",
-      rating: 4.9,
-      reviews: 203,
-      image: "https://images.pexels.com/photos/2064827/pexels-photo-2064827.jpeg?auto=compress&cs=tinysrgb&w=800",
-      category: "weekend",
-      badge: "Top",
-      description: "Pažinkite amžinąjį miestą su jo neįtikėtina istorija",
-      includes: ["Skrydžiai", "3* viešbutis", "Pusryčiai", "Ekskursijos"],
-      availableSpots: 15,
-      departure: "2024-12-18"
-    },
-    {
-      id: 5,
-      title: "Egzotiškas Bali nuotykis",
-      location: "Indonezija",
-      duration: "10 dienų",
-      price: "1450",
-      originalPrice: "1650",
-      rating: 4.8,
-      reviews: 94,
-      image: "https://images.pexels.com/photos/2474690/pexels-photo-2474690.jpeg?auto=compress&cs=tinysrgb&w=800",
-      category: "vacation",
-      badge: "Likę 2 vietos",
-      description: "Nepamirštamas nuotykis egzotiškoje saloje",
-      includes: ["Skrydžiai", "4* resort", "Pusryčiai", "Spa procedūros"],
-      availableSpots: 2,
-      departure: "2024-12-25"
-    },
-    {
-      id: 6,
-      title: "Dantų gydymas Budapešte",
-      location: "Vengrija",
-      duration: "4 dienos",
-      price: "890",
-      originalPrice: "1050",
-      rating: 4.6,
-      reviews: 78,
-      image: "https://images.pexels.com/photos/1701595/pexels-photo-1701595.jpeg?auto=compress&cs=tinysrgb&w=800",
-      category: "medical",
-      badge: "Akcija",
-      description: "Kokybiškas dantų gydymas už prieinamą kainą",
-      includes: ["Skrydžiai", "3* viešbutis", "Gydymas", "Konsultacijos"],
-      availableSpots: 6,
-      departure: "2024-12-12"
-    },
-    {
-      id: 7,
-      title: "Šiaurės pašvaistė Islandijoje",
-      location: "Islandija",
-      duration: "5 dienos",
-      price: "890",
-      originalPrice: "990",
-      rating: 4.9,
-      reviews: 145,
-      image: "https://images.pexels.com/photos/1433052/pexels-photo-1433052.jpeg?auto=compress&cs=tinysrgb&w=800",
-      category: "nature",
-      badge: "Nauja",
-      description: "Stebėkite šiaurės pašvaistę ir geizerius",
-      includes: ["Skrydžiai", "3* viešbutis", "Pusryčiai", "Gidas"],
-      availableSpots: 10,
-      departure: "2024-12-22"
-    },
-    {
-      id: 8,
-      title: "Santorini saulėlydžiai",
-      location: "Graikija",
-      duration: "4 dienos",
-      price: "650",
-      originalPrice: "720",
-      rating: 4.8,
-      reviews: 167,
-      image: "https://images.pexels.com/photos/161815/santorini-travel-greece-island-161815.jpeg?auto=compress&cs=tinysrgb&w=800",
-      category: "weekend",
-      badge: "Populiaru",
-      description: "Romantiškas poilsis su nuostabiais saulėlydžiais",
-      includes: ["Skrydžiai", "4* viešbutis", "Pusryčiai", "Transferai"],
-      availableSpots: 7,
-      departure: "2024-12-16"
-    }
-  ];
 
   const filters = [
     { id: 'all', label: 'Visos kelionės', count: tours.length },
@@ -291,13 +173,33 @@ const ToursPage = () => {
 
         {/* Results Count */}
         <div className="mb-6">
-          <p className="text-gray-600">
-            Rasta <span className="font-bold text-teal-600">{filteredTours.length}</span> kelionių
-          </p>
+          {loading && (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
+              <span className="ml-3 text-gray-600">Kraunamos kelionės...</span>
+            </div>
+          )}
+          {error && (
+            <div className="text-center py-8">
+              <div className="text-red-600 mb-2">{error}</div>
+              <button 
+                onClick={() => window.location.reload()} 
+                className="text-teal-600 hover:text-teal-700 font-medium"
+              >
+                Bandyti dar kartą
+              </button>
+            </div>
+          )}
+          {!loading && !error && (
+            <p className="text-gray-600">
+              Rasta <span className="font-bold text-teal-600">{filteredTours.length}</span> kelionių
+            </p>
+          )}
         </div>
 
         {/* Tours Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {!loading && !error && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredTours.map((tour) => (
             <div
               key={tour.id}
@@ -361,9 +263,9 @@ const ToursPage = () => {
                 {/* Includes */}
                 <div className="mb-4">
                   <div className="flex flex-wrap gap-1">
-                    {tour.includes.slice(0, 2).map((item, index) => (
+                    {tour.includes.slice(0, 2).map((item: string, index: number) => (
                       <span
-                        key={index}
+                        key={`${tour.id}-include-${index}`}
                         className="bg-teal-50 text-teal-700 px-2 py-1 rounded-full text-xs font-medium"
                       >
                         {item}
@@ -400,9 +302,10 @@ const ToursPage = () => {
             </div>
           ))}
         </div>
-          
+        )}
+
         {/* No Results */}
-        {filteredTours.length === 0 && (
+        {!loading && !error && filteredTours.length === 0 && (
           <div className="text-center py-16">
             <div className="text-6xl mb-4">🔍</div>
             <h3 className="text-2xl font-bold text-gray-800 mb-2">Kelionių nerasta</h3>

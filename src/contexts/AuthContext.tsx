@@ -22,11 +22,13 @@ interface AuthProviderProps {
 }
 
 // JWT token utilities
+const JWT_SECRET = import.meta.env.VITE_JWT_SECRET || 'default-secret-change-me';
+
 const generateJWT = (payload: any): string => {
   const header = { alg: 'HS256', typ: 'JWT' };
   const encodedHeader = btoa(JSON.stringify(header));
   const encodedPayload = btoa(JSON.stringify(payload));
-  const signature = btoa('koradius-secret-key'); // In production, use a proper secret
+  const signature = btoa(JWT_SECRET); // Use environment variable or fallback
   
   return `${encodedHeader}.${encodedPayload}.${signature}`;
 };
@@ -98,11 +100,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const login = async (username: string, password: string): Promise<boolean> => {
-    // For now, using hardcoded credentials
-    // In a real app, this would be an API call
-    if (username === 'admin' && password === 'admin123') {
+    // Get credentials from environment variables with fallbacks
+    const adminUsername = import.meta.env.VITE_ADMIN_USERNAME || 'admin';
+    const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD || 'admin123';
+    
+    // For now, using environment-based credentials
+    // In a real app, this would be an API call to validate against a database
+    if (username === adminUsername && password === adminPassword) {
       const payload = {
-        username: 'admin',
+        username: adminUsername,
         role: 'admin',
         iat: Math.floor(Date.now() / 1000),
         exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours from now
