@@ -1,17 +1,24 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Star, ChevronLeft, ChevronRight, Quote, Filter, Calendar, MapPin, ThumbsUp, ChevronDown } from 'lucide-react';
+import { Star, ChevronLeft, ChevronRight, Quote, Filter, Calendar, MapPin, ThumbsUp, ChevronDown, X, Send } from 'lucide-react';
 
 const ReviewsPage = () => {
   const navigate = useNavigate();
 
   const handleWriteReview = () => {
-    navigate('/contact?subject=Rašyti atsiliepimą');
+    setShowReviewForm(true);
   };
 
   const [currentReview, setCurrentReview] = useState(0);
   const [filterRating, setFilterRating] = useState('all');
   const [filterCategory, setFilterCategory] = useState('all');
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewForm, setReviewForm] = useState({
+    name: '',
+    description: '',
+    rating: 0,
+    category: 'vacation'
+  });
 
   const reviews = [
     {
@@ -167,6 +174,77 @@ const ReviewsPage = () => {
     ));
   };
 
+  const renderRatingStars = (rating: number, interactive: boolean = false, onRatingChange?: (rating: number) => void) => {
+    return Array.from({ length: 5 }, (_, index) => (
+      <Star
+        key={index}
+        size={interactive ? 32 : 20}
+        className={`${
+          index < rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
+        } ${interactive ? 'cursor-pointer hover:scale-110 transition-transform duration-200' : ''}`}
+        onClick={() => interactive && onRatingChange && onRatingChange(index + 1)}
+      />
+    ));
+  };
+
+  const handleRatingChange = (rating: number) => {
+    setReviewForm(prev => ({ ...prev, rating }));
+  };
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!reviewForm.name.trim() || !reviewForm.description.trim() || reviewForm.rating === 0) {
+      alert('Prašome užpildyti visus laukus ir pasirinkti įvertinimą');
+      return;
+    }
+
+    if (reviewForm.description.trim().length < 50) {
+      alert('Atsiliepimas turi būti bent 50 simbolių ilgio');
+      return;
+    }
+
+    // Here you would typically send the review to your backend
+    const newReview = {
+      id: Date.now(),
+      name: reviewForm.name,
+      age: 0, // You could add age field if needed
+      location: "Lietuva",
+      rating: reviewForm.rating,
+      text: reviewForm.description,
+      trip: reviewForm.category,
+      image: "https://images.pexels.com/photos/1181686/pexels-photo-1181686.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop",
+      date: new Date().toISOString().split('T')[0],
+      category: reviewForm.category,
+      helpful: 0,
+      verified: false
+    };
+
+    // Add to reviews array (in a real app, this would go to backend)
+    // reviews.unshift(newReview);
+    
+    // Reset form and close
+    setReviewForm({
+      name: '',
+      description: '',
+      rating: 0,
+      category: 'vacation'
+    });
+    setShowReviewForm(false);
+    
+    alert('Ačiū už jūsų atsiliepimą! Jis bus peržiūrėtas ir patvirtintas.');
+  };
+
+  const handleFormClose = () => {
+    setShowReviewForm(false);
+    setReviewForm({
+      name: '',
+      description: '',
+      rating: 0,
+      category: 'vacation'
+    });
+  };
+
   const averageRating = reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length;
   const totalReviews = reviews.length;
 
@@ -185,6 +263,136 @@ const ReviewsPage = () => {
             Sužinokite, ką sako mūsų klientai apie keliones su Koradius Travel
           </p>
         </div>
+
+        {/* Review Form Modal */}
+        {showReviewForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <div className="flex items-center space-x-3">
+                  <div className="bg-gradient-to-r from-teal-500 to-teal-600 p-3 rounded-full">
+                    <Quote className="text-white" size={24} />
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-800">Rašyti atsiliepimą</h2>
+                </div>
+                <button
+                  onClick={handleFormClose}
+                  className="text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              {/* Form */}
+              <form onSubmit={handleFormSubmit} className="p-6 space-y-6">
+                {/* Name Input */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Jūsų vardas *
+                  </label>
+                  <input
+                    type="text"
+                    value={reviewForm.name}
+                    onChange={(e) => setReviewForm(prev => ({ ...prev, name: e.target.value }))}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200"
+                    placeholder="Įveskite savo vardą"
+                    required
+                  />
+                </div>
+
+                {/* Category Selection */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Kelionės tipas *
+                  </label>
+                  <select
+                    value={reviewForm.category}
+                    onChange={(e) => setReviewForm(prev => ({ ...prev, category: e.target.value }))}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200"
+                    required
+                  >
+                    <option value="vacation">Poilsinės kelionės</option>
+                    <option value="weekend">Savaitgalio kelionės</option>
+                    <option value="medical">Medicininis turizmas</option>
+                    <option value="nature">Gamtos kelionės</option>
+                  </select>
+                </div>
+
+                {/* Rating Selection */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Įvertinimas *
+                  </label>
+                  <div className="flex items-center space-x-4">
+                    <div className="flex space-x-2">
+                      {renderRatingStars(reviewForm.rating, true, handleRatingChange)}
+                    </div>
+                    <span className="text-lg font-semibold text-gray-600">
+                      {reviewForm.rating > 0 ? `${reviewForm.rating}/5` : 'Pasirinkite įvertinimą'}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-500 mt-2">
+                    Kiek žvaigždžių suteiktumėte mūsų paslaugoms?
+                  </p>
+                </div>
+
+                {/* Description Input */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Jūsų atsiliepimas *
+                  </label>
+                  <textarea
+                    value={reviewForm.description}
+                    onChange={(e) => setReviewForm(prev => ({ ...prev, description: e.target.value }))}
+                    rows={6}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200 resize-none"
+                    placeholder="Pasidalinkite savo patirtimi, kaip praėjo kelionė, kas patiko, kas galėtų būti geriau..."
+                    required
+                  />
+                  <div className="flex justify-between items-center mt-2">
+                    <p className="text-sm text-gray-500">
+                      Minimalus ilgis: 50 simbolių
+                    </p>
+                    <p className={`text-sm font-medium ${
+                      reviewForm.description.length >= 50 ? 'text-green-600' : 'text-gray-500'
+                    }`}>
+                      {reviewForm.description.length}/50 simbolių
+                    </p>
+                  </div>
+                </div>
+
+                {/* Auto-generated Date Info */}
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <div className="flex items-center space-x-2 text-gray-600">
+                    <Calendar size={16} />
+                    <span className="text-sm">
+                      Atsiliepimo data bus automatiškai nustatyta: {new Date().toLocaleDateString('lt-LT')}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Submit Button */}
+                <div className="flex space-x-4 pt-4">
+                  <button
+                    type="button"
+                    onClick={handleFormClose}
+                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-6 rounded-xl transition-all duration-200"
+                  >
+                    Atšaukti
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 flex items-center justify-center space-x-2"
+                  >
+                    <Send size={20} />
+                    <span>Siųsti atsiliepimą</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* Overall Stats */}
         <div className="bg-white rounded-3xl shadow-lg p-8 mb-12">
