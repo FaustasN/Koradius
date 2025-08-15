@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Settings, Image, MessageSquare, Clock, Plus, Edit, Trash2, Bell, Package, Database, Search, Star, Phone, Mail, Home, CheckCircle, Eye, EyeOff, ChevronUp, ChevronDown } from 'lucide-react';
+import { LogOut, Settings, Image, MessageSquare, Clock, Plus, Edit, Trash2, Bell, Package, Database, Search, Star, Phone, Mail, Home, CheckCircle, Eye, EyeOff, ChevronUp, ChevronDown, BarChart3 } from 'lucide-react';
 import ImageUpload from '../components/ImageUpload';
+import GoogleAnalytics from '../components/GoogleAnalytics';
 import { notificationsAPI, contactsAPI, reviewsAPI, galleryAPI, travelPacketsAPI } from '../services/adminApiService';
 
 // Types for our data structures
@@ -94,7 +95,7 @@ const DashboardPage = () => {
   const navigate = useNavigate();
   const [userInfo, setUserInfo] = useState<{ username: string; role: string; exp: number } | null>(null);
   const [timeUntilExpiry, setTimeUntilExpiry] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'gallery' | 'packets' | 'zinutes' | 'atsiliepimai'>('gallery');
+  const [activeTab, setActiveTab] = useState<'gallery' | 'packets' | 'zinutes' | 'atsiliepimai' | 'analytics'>('gallery');
   const [isLoading, setIsLoading] = useState(false);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
 
@@ -437,7 +438,7 @@ const DashboardPage = () => {
       setUnreadCount(prev => Math.max(0, prev - 1));
       
       // Navigate to appropriate tab based on notification type
-      let targetTab: 'gallery' | 'packets' | 'zinutes' | 'atsiliepimai' | null = null;
+      let targetTab: 'gallery' | 'packets' | 'zinutes' | 'atsiliepimai' | 'analytics' | null = null;
       
       switch (notification.type) {
         case 'contact':
@@ -1131,6 +1132,19 @@ const DashboardPage = () => {
                 <span>Atsiliepimai</span>
               </div>
             </button>
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={`flex-1 px-6 py-4 text-sm font-medium transition-colors duration-200 ${
+                activeTab === 'analytics'
+                  ? 'text-teal-600 border-b-2 border-teal-600 bg-teal-50'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center justify-center space-x-2">
+                <BarChart3 className="h-5 w-5" />
+                <span>Analytics</span>
+              </div>
+            </button>
           </div>
 
                      {/* Tab Content */}
@@ -1723,6 +1737,11 @@ const DashboardPage = () => {
                       )}
                     </div>
                   </div>
+                )}
+
+                {/* Analytics Tab */}
+                {activeTab === 'analytics' && (
+                  <GoogleAnalytics />
                 )}
 
               </>
