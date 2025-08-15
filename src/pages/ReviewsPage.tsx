@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Star, ChevronLeft, ChevronRight, Quote, Filter, Calendar, MapPin, ThumbsUp, ChevronDown, X, Send } from 'lucide-react';
+import { Star, ChevronLeft, ChevronRight, Quote, Filter, Calendar, MapPin, ThumbsUp, ChevronDown, X, Send, CheckCircle } from 'lucide-react';
+import { sendFeedbackEmail } from '../services/emailService';
 
 const ReviewsPage = () => {
   const navigate = useNavigate();
@@ -13,8 +14,10 @@ const ReviewsPage = () => {
   const [filterRating, setFilterRating] = useState('all');
   const [filterCategory, setFilterCategory] = useState('all');
   const [showReviewForm, setShowReviewForm] = useState(false);
+  const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const [reviewForm, setReviewForm] = useState({
     name: '',
+    email: '',
     description: '',
     rating: 0,
     category: 'vacation'
@@ -191,10 +194,10 @@ const ReviewsPage = () => {
     setReviewForm(prev => ({ ...prev, rating }));
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!reviewForm.name.trim() || !reviewForm.description.trim() || reviewForm.rating === 0) {
+    if (!reviewForm.name.trim() || !reviewForm.email.trim() || !reviewForm.description.trim() || reviewForm.rating === 0) {
       alert('Prašome užpildyti visus laukus ir pasirinkti įvertinimą');
       return;
     }
@@ -204,41 +207,45 @@ const ReviewsPage = () => {
       return;
     }
 
-    // Here you would typically send the review to your backend
-    const newReview = {
-      id: Date.now(),
-      name: reviewForm.name,
-      age: 0, // You could add age field if needed
-      location: "Lietuva",
-      rating: reviewForm.rating,
-      text: reviewForm.description,
-      trip: reviewForm.category,
-      image: "https://images.pexels.com/photos/1181686/pexels-photo-1181686.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop",
-      date: new Date().toISOString().split('T')[0],
-      category: reviewForm.category,
-      helpful: 0,
-      verified: false
-    };
-
-    // Add to reviews array (in a real app, this would go to backend)
-    // reviews.unshift(newReview);
-    
-    // Reset form and close
-    setReviewForm({
-      name: '',
-      description: '',
-      rating: 0,
-      category: 'vacation'
-    });
-    setShowReviewForm(false);
-    
-    alert('Ačiū už jūsų atsiliepimą! Jis bus peržiūrėtas ir patvirtintas.');
+    try {
+      // Send email with feedback
+      await sendFeedbackEmail({
+        name: reviewForm.name,
+        email: reviewForm.email,
+        description: reviewForm.description,
+        rating: reviewForm.rating,
+        category: reviewForm.category
+      });
+      
+      // Reset form and close
+      setReviewForm({
+        name: '',
+        email: '',
+        description: '',
+        rating: 0,
+        category: 'vacation'
+      });
+      setShowReviewForm(false);
+      
+      // Show beautiful success notification
+      setShowSuccessNotification(true);
+      
+      // Auto-hide notification after 5 seconds
+      setTimeout(() => {
+        setShowSuccessNotification(false);
+      }, 5000);
+      
+    } catch (error) {
+      console.error('Error sending feedback:', error);
+      alert('Įvyko klaida siunčiant atsiliepimą. Bandykite dar kartą.');
+    }
   };
 
   const handleFormClose = () => {
     setShowReviewForm(false);
     setReviewForm({
       name: '',
+      email: '',
       description: '',
       rating: 0,
       category: 'vacation'
@@ -250,6 +257,40 @@ const ReviewsPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 pt-24">
+      {/* Success Notification */}
+      {showSuccessNotification && (
+        <div className="fixed top-24 right-4 z-50 animate-slide-in-right">
+          <div className="bg-white rounded-2xl shadow-2xl border-l-4 border-green-500 p-6 max-w-sm transform transition-all duration-500 ease-out">
+            <div className="flex items-start space-x-4">
+              <div className="flex-shrink-0">
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                  <CheckCircle className="text-green-600" size={24} />
+                </div>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-gray-800 mb-1">
+                  Ačiū už atsiliepimą!
+                </h3>
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  Jūsų atsiliepimas buvo sėkmingai išsiųstas ir bus peržiūrėtas. Jis padės kitiems keliautojams pasirinkti tinkamą kelionę.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowSuccessNotification(false)}
+                className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            {/* Progress bar */}
+            <div className="mt-4 w-full bg-gray-200 rounded-full h-1">
+              <div className="bg-green-500 h-1 rounded-full animate-progress-bar"></div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="container mx-auto px-4 py-8">
         {/* Page Header */}
         <div className="text-center mb-16">
@@ -297,6 +338,21 @@ const ReviewsPage = () => {
                     onChange={(e) => setReviewForm(prev => ({ ...prev, name: e.target.value }))}
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200"
                     placeholder="Įveskite savo vardą"
+                    required
+                  />
+                </div>
+
+                {/* Email Input */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Jūsų email *
+                  </label>
+                  <input
+                    type="email"
+                    value={reviewForm.email}
+                    onChange={(e) => setReviewForm(prev => ({ ...prev, email: e.target.value }))}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200"
+                    placeholder="Įveskite savo email"
                     required
                   />
                 </div>

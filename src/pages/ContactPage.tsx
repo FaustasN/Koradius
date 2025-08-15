@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { MapPin, Phone, Mail, Clock, Send, Facebook, Instagram, Youtube, MessageCircle, Calendar, User } from 'lucide-react';
+import { MapPin, Phone, Mail, Clock, Send, Facebook, Instagram, Youtube, MessageCircle, Calendar, User, CheckCircle, X } from 'lucide-react';
 import StaggeredAnimation from '../components/StaggeredAnimation';
 import FadeInAnimation from '../components/FadeInAnimation';
 import { contactsAPI } from '../services/adminApiService';
+import { sendContactEmail } from '../services/emailService';
 
 const ContactPage = () => {
   const [formData, setFormData] = useState({
@@ -16,6 +17,7 @@ const ContactPage = () => {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccessNotification, setShowSuccessNotification] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -30,8 +32,21 @@ const ContactPage = () => {
     setIsSubmitting(true);
     
     try {
+      // Send to admin API (existing functionality)
       await contactsAPI.submit(formData);
-      alert('Ačiū už jūsų žinutę! Susisieksime su jumis per 24 valandas.');
+      
+      // Send email notification
+      await sendContactEmail({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        subject: formData.subject,
+        message: formData.message,
+        preferredContact: formData.preferredContact,
+        urgency: formData.urgency
+      });
+      
+      // Reset form
       setFormData({
         name: '',
         email: '',
@@ -41,6 +56,15 @@ const ContactPage = () => {
         preferredContact: 'email',
         urgency: 'normal'
       });
+      
+      // Show beautiful success notification
+      setShowSuccessNotification(true);
+      
+      // Auto-hide notification after 5 seconds
+      setTimeout(() => {
+        setShowSuccessNotification(false);
+      }, 5000);
+      
     } catch (error) {
       console.error('Error submitting contact form:', error);
       alert('Atsiprašome, įvyko klaida. Bandykite dar kartą arba susisiekite telefonu.');
@@ -99,6 +123,40 @@ const ContactPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 pt-24">
+      {/* Success Notification */}
+      {showSuccessNotification && (
+        <div className="fixed top-24 right-4 z-50 animate-slide-in-right">
+          <div className="bg-white rounded-2xl shadow-2xl border-l-4 border-green-500 p-6 max-w-sm transform transition-all duration-500 ease-out">
+            <div className="flex items-start space-x-4">
+              <div className="flex-shrink-0">
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                  <CheckCircle className="text-green-600" size={24} />
+                </div>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-gray-800 mb-1">
+                  Žinutė išsiųsta!
+                </h3>
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  Ačiū už jūsų žinutę! Susisieksime su jumis per 24 valandas. Patikrinkite savo el. paštą dėl patvirtinimo.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowSuccessNotification(false)}
+                className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            {/* Progress bar */}
+            <div className="mt-4 w-full bg-gray-200 rounded-full h-1">
+              <div className="bg-green-500 h-1 rounded-full animate-progress-bar"></div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="container mx-auto px-4 py-8">
         {/* Page Header */}
         <FadeInAnimation className="text-center mb-12">

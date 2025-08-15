@@ -77,6 +77,15 @@ h1, h2, h3, h4, h5, h6, p, span, div {
   }
 }
 
+@keyframes progressBar {
+  0% {
+    width: 0%;
+  }
+  100% {
+    width: 100%;
+  }
+}
+
 @keyframes pulse {
   0%, 100% {
     opacity: 1;
@@ -276,4 +285,13 @@ select:focus {
   .no-print {
     display: none !important;
   }
+}
+
+/* Notification animations */
+.animate-slide-in-right {
+  animation: slideInRight 0.5s ease-out forwards;
+}
+
+.animate-progress-bar {
+  animation: progressBar 5s linear forwards;
 }
