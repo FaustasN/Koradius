@@ -768,6 +768,22 @@ app.put('/api/admin/contacts/:id/resolve', authenticateToken, async (req, res) =
   }
 });
 
+app.put('/api/admin/contacts/:id/unresolve', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await pool.query(
+      'UPDATE contacts SET is_resolved = false, resolved_by = NULL, resolved_at = NULL WHERE id = $1',
+      [id]
+    );
+
+    res.json({ message: 'Contact marked as unresolved' });
+  } catch (error) {
+    console.error('Error unresolving contact:', error);
+    res.status(500).json({ error: 'Failed to unresolve contact' });
+  }
+});
+
 // Admin reviews management
 app.get('/api/admin/reviews', authenticateToken, async (req, res) => {
   try {

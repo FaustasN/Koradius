@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Settings, Image, MessageSquare, Clock, Plus, Edit, Trash2, Eye, Bell, Package, Database, Search, Filter, Star, Phone, Mail, User, Home } from 'lucide-react';
+import { LogOut, Settings, Image, MessageSquare, Clock, Plus, Edit, Trash2, Bell, Package, Database, Search, Star, Phone, Mail, Home, CheckCircle, Eye, EyeOff, ChevronUp, ChevronDown } from 'lucide-react';
 import ImageUpload from '../components/ImageUpload';
 import { notificationsAPI, contactsAPI, reviewsAPI, galleryAPI, travelPacketsAPI } from '../services/adminApiService';
 
@@ -59,6 +59,7 @@ interface Contact {
   is_resolved: boolean;
   resolved_at?: string;
   created_at: string;
+  is_read?: boolean; // Add read status
 }
 
 interface Review {
@@ -93,7 +94,7 @@ const DashboardPage = () => {
   const navigate = useNavigate();
   const [userInfo, setUserInfo] = useState<{ username: string; role: string; exp: number } | null>(null);
   const [timeUntilExpiry, setTimeUntilExpiry] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'gallery' | 'packets' | 'messages'>('gallery');
+  const [activeTab, setActiveTab] = useState<'gallery' | 'packets' | 'zinutes' | 'atsiliepimai'>('gallery');
   const [isLoading, setIsLoading] = useState(false);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
 
@@ -102,14 +103,18 @@ const DashboardPage = () => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   
-  // Message filtering state
-  const [messageFilter, setMessageFilter] = useState<'all' | 'contact' | 'review'>('all');
+  // Contact filtering state (for Žinutės tab)
+  const [contactSearchQuery, setContactSearchQuery] = useState('');
   const [urgencyFilter, setUrgencyFilter] = useState<'all' | 'normal' | 'urgent' | 'emergency'>('all');
   const [subjectFilter, setSubjectFilter] = useState('');
   const [contactMethodFilter, setContactMethodFilter] = useState<'all' | 'email' | 'phone' | 'both'>('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
-  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [readStatusFilter, setReadStatusFilter] = useState<'all' | 'read' | 'unread'>('all');
+  const [resolvedStatusFilter, setResolvedStatusFilter] = useState<'all' | 'resolved' | 'unresolved'>('all');
+  
+  // Review filtering state (for Atsiliepimai tab)
+  const [reviewSearchQuery, setReviewSearchQuery] = useState('');
+  const [ratingFilter, setRatingFilter] = useState<'all' | '1' | '2' | '3' | '4' | '5'>('all');
+  const [approvalFilter, setApprovalFilter] = useState<'all' | 'approved' | 'pending'>('all');
 
   // Gallery state
   const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
@@ -146,6 +151,22 @@ const DashboardPage = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [hasNewNotifications, setHasNewNotifications] = useState(false);
+
+  // Item highlighting state for notification navigation
+  const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
+
+  // Contact expansion and read status
+  const [expandedContactId, setExpandedContactId] = useState<number | null>(null);
+  const [readContacts, setReadContacts] = useState<Set<number>>(() => {
+    // Load read status from localStorage
+    const saved = localStorage.getItem('readContacts');
+    return saved ? new Set(JSON.parse(saved)) : new Set();
+  });
+
+  // Save read status to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('readContacts', JSON.stringify([...readContacts]));
+  }, [readContacts]);
 
   useEffect(() => {
     // Get user info from JWT token
@@ -219,7 +240,7 @@ const DashboardPage = () => {
     }
   }, [isAuthenticated]); // Run when authentication state changes
 
-  // Set up real-time notification polling
+  // Set up real-time notification polling and auto-refresh
   useEffect(() => {
     if (isAuthenticated) {
       // Poll for new notifications every 30 seconds
@@ -227,9 +248,30 @@ const DashboardPage = () => {
         loadNotifications();
       }, 30000); // 30 seconds
 
-      return () => clearInterval(notificationInterval);
+      // Auto-refresh current tab data every 60 seconds
+      const dataRefreshInterval = setInterval(() => {
+        switch (activeTab) {
+          case 'gallery':
+            loadGalleryItems().catch(error => console.error('Error auto-refreshing gallery:', error));
+            break;
+          case 'packets':
+            loadTravelPackets().catch(error => console.error('Error auto-refreshing packets:', error));
+            break;
+          case 'zinutes':
+            loadContacts().catch(error => console.error('Error auto-refreshing contacts:', error));
+            break;
+          case 'atsiliepimai':
+            loadReviews().catch(error => console.error('Error auto-refreshing reviews:', error));
+            break;
+        }
+      }, 60000); // 60 seconds
+
+      return () => {
+        clearInterval(notificationInterval);
+        clearInterval(dataRefreshInterval);
+      };
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, activeTab]);
 
   // Close notifications dropdown when clicking outside
   useEffect(() => {
@@ -243,6 +285,26 @@ const DashboardPage = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showNotificationsDropdown]);
+
+  // Auto-fetch data when entering a tab
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    switch (activeTab) {
+      case 'gallery':
+        loadGalleryItems();
+        break;
+      case 'packets':
+        loadTravelPackets();
+        break;
+      case 'zinutes':
+        loadContacts();
+        break;
+      case 'atsiliepimai':
+        loadReviews();
+        break;
+    }
+  }, [activeTab, isAuthenticated]);
 
   const loadAllData = async () => {
     setIsLoading(true);
@@ -362,6 +424,73 @@ const DashboardPage = () => {
     }
   };
 
+  // Handle notification clicks - navigate to relevant tab and mark as read
+  const handleNotificationClick = async (notification: Notification) => {
+    try {
+      // Mark notification as read
+      await notificationsAPI.markAsRead(notification.id);
+      
+      // Update local state
+      setNotifications(prev => 
+        prev.map(n => n.id === notification.id ? { ...n, isRead: true } : n)
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
+      
+      // Navigate to appropriate tab based on notification type
+      let targetTab: 'gallery' | 'packets' | 'zinutes' | 'atsiliepimai' | null = null;
+      
+      switch (notification.type) {
+        case 'contact':
+          targetTab = 'zinutes';
+          break;
+        case 'review':
+          targetTab = 'atsiliepimai';
+          break;
+        case 'order':
+          targetTab = 'packets';
+          break;
+        case 'system':
+        default:
+          // Stay on current tab for system notifications
+          break;
+      }
+      
+      if (targetTab) {
+        setActiveTab(targetTab);
+        
+        // Set highlighting effect based on notification type and try to match the specific item
+        if (notification.type === 'contact') {
+          // Try to find a contact that matches the notification (by recent timestamp or content)
+          const recentContact = contacts.find(contact => 
+            Math.abs(new Date(contact.created_at).getTime() - new Date(notification.timestamp).getTime()) < 60000 // Within 1 minute
+          );
+          if (recentContact) {
+            setHighlightedItemId(`contact-${recentContact.id}`);
+          }
+        } else if (notification.type === 'review') {
+          // Try to find a review that matches the notification (by recent timestamp or content)
+          const recentReview = reviews.find(review => 
+            Math.abs(new Date(review.created_at).getTime() - new Date(notification.timestamp).getTime()) < 60000 // Within 1 minute
+          );
+          if (recentReview) {
+            setHighlightedItemId(`review-${recentReview.id}`);
+          }
+        }
+        
+        // Clear highlighting after 3 seconds
+        setTimeout(() => {
+          setHighlightedItemId(null);
+        }, 3000);
+      }
+      
+      // Close notifications dropdown
+      setShowNotificationsDropdown(false);
+      
+    } catch (error) {
+      console.error('Error handling notification click:', error);
+    }
+  };
+
   const loadContacts = async () => {
     try {
       const data = await contactsAPI.getAll();
@@ -414,29 +543,66 @@ const DashboardPage = () => {
     setMessages(combinedMessages);
   };
 
-  const getFilteredMessages = () => {
-    return messages.filter(message => {
-      // Type filter
-      if (messageFilter !== 'all' && message.type !== messageFilter) return false;
+  // Separate filtering functions for the new tabs
+  const getFilteredContacts = () => {
+    return contacts.filter(contact => {
+      // Urgency filter
+      if (urgencyFilter !== 'all' && contact.urgency !== urgencyFilter) return false;
       
-      // Urgency filter (only for contact messages)
-      if (urgencyFilter !== 'all' && message.type === 'contact' && message.urgency !== urgencyFilter) return false;
+      // Subject filter
+      if (subjectFilter && !contact.subject?.toLowerCase().includes(subjectFilter.toLowerCase())) return false;
       
-      // Subject filter (only for contact messages)
-      if (subjectFilter && message.type === 'contact' && !message.subject?.toLowerCase().includes(subjectFilter.toLowerCase())) return false;
+      // Contact method filter
+      if (contactMethodFilter !== 'all' && contact.preferred_contact !== contactMethodFilter) return false;
       
-      // Contact method filter (only for contact messages)
-      if (contactMethodFilter !== 'all' && message.type === 'contact' && message.preferred_contact !== contactMethodFilter) return false;
+      // Read status filter
+      if (readStatusFilter !== 'all') {
+        const isRead = readContacts.has(contact.id);
+        if (readStatusFilter === 'read' && !isRead) return false;
+        if (readStatusFilter === 'unread' && isRead) return false;
+      }
+      
+      // Resolved status filter
+      if (resolvedStatusFilter !== 'all') {
+        if (resolvedStatusFilter === 'resolved' && !contact.is_resolved) return false;
+        if (resolvedStatusFilter === 'unresolved' && contact.is_resolved) return false;
+      }
       
       // Search query filter
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
+      if (contactSearchQuery) {
+        const query = contactSearchQuery.toLowerCase();
         return (
-          message.name.toLowerCase().includes(query) ||
-          message.email.toLowerCase().includes(query) ||
-          message.message.toLowerCase().includes(query) ||
-          (message.phone && message.phone.toLowerCase().includes(query)) ||
-          (message.subject && message.subject.toLowerCase().includes(query))
+          contact.name.toLowerCase().includes(query) ||
+          contact.email.toLowerCase().includes(query) ||
+          contact.message.toLowerCase().includes(query) ||
+          (contact.phone && contact.phone.toLowerCase().includes(query)) ||
+          contact.subject.toLowerCase().includes(query)
+        );
+      }
+      
+      return true;
+    });
+  };
+
+  const getFilteredReviews = () => {
+    return reviews.filter(review => {
+      // Rating filter
+      if (ratingFilter !== 'all' && review.rating.toString() !== ratingFilter) return false;
+      
+      // Approval filter
+      if (approvalFilter !== 'all') {
+        if (approvalFilter === 'approved' && !review.is_approved) return false;
+        if (approvalFilter === 'pending' && review.is_approved) return false;
+      }
+      
+      // Search query filter
+      if (reviewSearchQuery) {
+        const query = reviewSearchQuery.toLowerCase();
+        return (
+          review.name.toLowerCase().includes(query) ||
+          review.email.toLowerCase().includes(query) ||
+          review.comment.toLowerCase().includes(query) ||
+          (review.trip_reference && review.trip_reference.toLowerCase().includes(query))
         );
       }
       
@@ -471,17 +637,6 @@ const DashboardPage = () => {
     }
   };
 
-  const getCookie = (name: string): string | null => {
-    const nameEQ = name + "=";
-    const ca = document.cookie.split(';');
-    for (let i = 0; i < ca.length; i++) {
-      let c = ca[i];
-      while (c.charAt(0) === ' ') c = c.substring(1, c.length);
-      if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
-    }
-    return null;
-  };
-
   const handleLogout = () => {
     logout();
     navigate('/dashboard/login');
@@ -489,6 +644,33 @@ const DashboardPage = () => {
 
   const handleGoToHome = () => {
     navigate('/');
+  };
+
+  // Contact handling functions
+  const handleContactClick = (contactId: number) => {
+    // Toggle expansion
+    setExpandedContactId(expandedContactId === contactId ? null : contactId);
+    
+    // Mark as read when clicked
+    if (!readContacts.has(contactId)) {
+      setReadContacts(prev => new Set([...prev, contactId]));
+    }
+  };
+
+  const toggleContactReadStatus = (contactId: number) => {
+    setReadContacts(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(contactId)) {
+        newSet.delete(contactId);
+      } else {
+        newSet.add(contactId);
+      }
+      return newSet;
+    });
+  };
+
+  const getUnreadContactsCount = () => {
+    return getFilteredContacts().filter(contact => !readContacts.has(contact.id)).length;
   };
 
   // Gallery functions
@@ -656,16 +838,47 @@ const DashboardPage = () => {
     }
   };
 
-  // Notification functions
-  const markNotificationAsRead = async (id: number) => {
+  // Contact handlers
+  const handleResolveContact = async (id: number) => {
     try {
-      await notificationsAPI.markAsRead(id);
-      loadNotifications();
+      await contactsAPI.resolve(id);
+      loadContacts(); // Reload contacts to reflect the changes
     } catch (error) {
-      console.error('Error marking notification as read:', error);
+      console.error('Error resolving contact:', error);
     }
   };
 
+  const handleUnresolveContact = async (id: number) => {
+    try {
+      await contactsAPI.unresolve(id);
+      loadContacts(); // Reload contacts to reflect the changes
+    } catch (error) {
+      console.error('Error unresolving contact:', error);
+    }
+  };
+
+  // Review handlers
+  const handleApproveReview = async (id: number) => {
+    try {
+      await reviewsAPI.approve(id);
+      loadReviews(); // Reload reviews to reflect the changes
+    } catch (error) {
+      console.error('Error approving review:', error);
+    }
+  };
+
+  const handleDeleteReview = async (id: number) => {
+    if (window.confirm('Ar tikrai norite ištrinti šį atsiliepimą?')) {
+      try {
+        await reviewsAPI.delete(id);
+        loadReviews(); // Reload reviews to reflect the changes
+      } catch (error) {
+        console.error('Error deleting review:', error);
+      }
+    }
+  };
+
+  // Notification functions
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'high': return 'text-red-600 bg-red-50';
@@ -749,7 +962,7 @@ const DashboardPage = () => {
                               className={`p-4 hover:bg-gray-50 transition-colors duration-200 cursor-pointer ${
                                 !notification.isRead ? 'bg-blue-50' : ''
                               }`}
-                              onClick={() => markNotificationAsRead(notification.id)}
+                              onClick={() => handleNotificationClick(notification)}
                             >
                               <div className="flex items-start space-x-3">
                                 <div className={`p-1 rounded-full ${getPriorityColor(notification.priority)}`}>
@@ -888,9 +1101,9 @@ const DashboardPage = () => {
               </div>
             </button>
             <button
-              onClick={() => setActiveTab('messages')}
+              onClick={() => setActiveTab('zinutes')}
               className={`flex-1 px-6 py-4 text-sm font-medium transition-colors duration-200 ${
-                activeTab === 'messages'
+                activeTab === 'zinutes'
                   ? 'text-teal-600 border-b-2 border-teal-600 bg-teal-50'
                   : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
               }`}
@@ -898,6 +1111,24 @@ const DashboardPage = () => {
               <div className="flex items-center justify-center space-x-2">
                 <MessageSquare className="h-5 w-5" />
                 <span>Žinutės</span>
+                {getUnreadContactsCount() > 0 && (
+                  <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5 min-w-[20px] h-5 flex items-center justify-center">
+                    {getUnreadContactsCount()}
+                  </span>
+                )}
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('atsiliepimai')}
+              className={`flex-1 px-6 py-4 text-sm font-medium transition-colors duration-200 ${
+                activeTab === 'atsiliepimai'
+                  ? 'text-teal-600 border-b-2 border-teal-600 bg-teal-50'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center justify-center space-x-2">
+                <Star className="h-5 w-5" />
+                <span>Atsiliepimai</span>
               </div>
             </button>
           </div>
@@ -1020,20 +1251,20 @@ const DashboardPage = () => {
                   </div>
                 )}
 
-                {/* Messages Tab (Unified Contacts & Reviews) */}
-                {activeTab === 'messages' && (
+                {/* Contacts Tab (Žinutės) */}
+                {activeTab === 'zinutes' && (
                   <div>
                     <div className="flex justify-between items-center mb-6">
-                      <h3 className="text-xl font-semibold text-gray-900">Žinutės</h3>
+                      <h3 className="text-xl font-semibold text-gray-900">Kontaktai</h3>
                       <button
-                        onClick={() => { loadContacts(); loadReviews(); }}
+                        onClick={loadContacts}
                         className="text-teal-600 hover:text-teal-800 text-sm font-medium"
                       >
                         Atnaujinti
                       </button>
                     </div>
 
-                    {/* Filter Controls */}
+                    {/* Filter Controls for Contacts */}
                     <div className="bg-gray-50 rounded-lg p-4 mb-6 space-y-4">
                       {/* Search Bar */}
                       <div className="relative">
@@ -1041,27 +1272,14 @@ const DashboardPage = () => {
                         <input
                           type="text"
                           placeholder="Ieškoti pagal vardą, el. paštą, žinutę..."
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
+                          value={contactSearchQuery}
+                          onChange={(e) => setContactSearchQuery(e.target.value)}
                           className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                         />
                       </div>
 
                       {/* Filter Dropdowns */}
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Tipas</label>
-                          <select
-                            value={messageFilter}
-                            onChange={(e) => setMessageFilter(e.target.value as any)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                          >
-                            <option value="all">Visi</option>
-                            <option value="contact">Kontaktai</option>
-                            <option value="review">Atsiliepimai</option>
-                          </select>
-                        </div>
-
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Skubumas</label>
                           <select
@@ -1100,20 +1318,41 @@ const DashboardPage = () => {
                             <option value="both">Abu būdai</option>
                           </select>
                         </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Perskaitytos</label>
+                          <select
+                            value={readStatusFilter}
+                            onChange={(e) => setReadStatusFilter(e.target.value as any)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                          >
+                            <option value="all">Visos</option>
+                            <option value="unread">Neperskaitytos</option>
+                            <option value="read">Perskaitytos</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Išspręstos</label>
+                          <select
+                            value={resolvedStatusFilter}
+                            onChange={(e) => setResolvedStatusFilter(e.target.value as any)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                          >
+                            <option value="all">Visos</option>
+                            <option value="unresolved">Neišspręstos</option>
+                            <option value="resolved">Išspręstos</option>
+                          </select>
+                        </div>
                       </div>
 
                       {/* Active Filters Display */}
-                      {(searchQuery || messageFilter !== 'all' || urgencyFilter !== 'all' || subjectFilter || contactMethodFilter !== 'all') && (
-                        <div className="flex items-center space-x-2">
+                      {(contactSearchQuery || urgencyFilter !== 'all' || subjectFilter || contactMethodFilter !== 'all' || readStatusFilter !== 'all' || resolvedStatusFilter !== 'all') && (
+                        <div className="flex items-center space-x-2 flex-wrap">
                           <span className="text-sm text-gray-600">Aktyvūs filtrai:</span>
-                          {searchQuery && (
+                          {contactSearchQuery && (
                             <span className="px-2 py-1 bg-teal-100 text-teal-800 text-xs rounded-full">
-                              Paieška: {searchQuery}
-                            </span>
-                          )}
-                          {messageFilter !== 'all' && (
-                            <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                              Tipas: {messageFilter === 'contact' ? 'Kontaktai' : 'Atsiliepimai'}
+                              Paieška: {contactSearchQuery}
                             </span>
                           )}
                           {urgencyFilter !== 'all' && (
@@ -1131,13 +1370,24 @@ const DashboardPage = () => {
                               Ryšys: {getContactMethodLabel(contactMethodFilter)}
                             </span>
                           )}
+                          {readStatusFilter !== 'all' && (
+                            <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                              Skaitymas: {readStatusFilter === 'read' ? 'Perskaitytos' : 'Neperskaitytos'}
+                            </span>
+                          )}
+                          {resolvedStatusFilter !== 'all' && (
+                            <span className="px-2 py-1 bg-indigo-100 text-indigo-800 text-xs rounded-full">
+                              Sprendimas: {resolvedStatusFilter === 'resolved' ? 'Išspręstos' : 'Neišspręstos'}
+                            </span>
+                          )}
                           <button
                             onClick={() => {
-                              setSearchQuery('');
-                              setMessageFilter('all');
+                              setContactSearchQuery('');
                               setUrgencyFilter('all');
                               setSubjectFilter('');
                               setContactMethodFilter('all');
+                              setReadStatusFilter('all');
+                              setResolvedStatusFilter('all');
                             }}
                             className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full hover:bg-gray-200"
                           >
@@ -1148,89 +1398,324 @@ const DashboardPage = () => {
                     </div>
 
                     <div className="space-y-4">
-                      {getFilteredMessages().length === 0 ? (
+                      {getFilteredContacts().length === 0 ? (
                         <div className="text-center py-8 text-gray-500">
-                          {searchQuery || messageFilter !== 'all' || urgencyFilter !== 'all' || subjectFilter || contactMethodFilter !== 'all' 
-                            ? 'Nerasta žinučių atitinkančių filtro kriterijus'
-                            : 'Žinučių nėra'
+                          {contactSearchQuery || urgencyFilter !== 'all' || subjectFilter || contactMethodFilter !== 'all' || readStatusFilter !== 'all' || resolvedStatusFilter !== 'all'
+                            ? 'Nerasta kontaktų atitinkančių filtro kriterijus'
+                            : 'Kontaktų nėra'
                           }
                         </div>
                       ) : (
-                        getFilteredMessages().map((message) => (
+                        getFilteredContacts().map((contact) => {
+                          const isRead = readContacts.has(contact.id);
+                          const isExpanded = expandedContactId === contact.id;
+                          
+                          return (
+                            <div
+                              key={contact.id}
+                              className={`p-4 rounded-lg border transition-all duration-200 cursor-pointer ${
+                                highlightedItemId === `contact-${contact.id}` 
+                                  ? 'ring-2 ring-teal-500 bg-teal-50 animate-pulse' 
+                                  : isRead 
+                                    ? 'bg-white border-gray-200 hover:shadow-md'
+                                    : 'bg-blue-50 border-blue-200 hover:shadow-lg'
+                              }`}
+                              onClick={() => handleContactClick(contact.id)}
+                            >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-3 mb-2">
+                                  {!isRead && (
+                                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                  )}
+                                  <h4 className="font-semibold text-gray-900">{contact.name}</h4>
+                                  <span className="text-sm text-gray-500">({contact.email})</span>
+                                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${getUrgencyBadgeColor(contact.urgency)}`}>
+                                    {getUrgencyLabel(contact.urgency)}
+                                  </span>
+                                  {contact.is_resolved && (
+                                    <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                                      Išspręsta
+                                    </span>
+                                  )}
+                                  {isRead && (
+                                    <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600">
+                                      Perskaityta
+                                    </span>
+                                  )}
+                                </div>
+                                
+                                <p className="text-sm font-medium text-gray-700 mb-1">Tema: {contact.subject}</p>
+                                
+                                {isExpanded ? (
+                                  <div className="text-sm text-gray-600 mb-2 whitespace-pre-wrap">
+                                    {contact.message}
+                                  </div>
+                                ) : (
+                                  <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                                    {contact.message.length > 120 
+                                      ? `${contact.message.substring(0, 120)}...` 
+                                      : contact.message
+                                    }
+                                  </p>
+                                )}
+                                
+                                <div className="flex items-center space-x-4 text-xs text-gray-500">
+                                  <span>{new Date(contact.created_at).toLocaleString('lt-LT')}</span>
+                                  {contact.phone && (
+                                    <span className="flex items-center space-x-1">
+                                      <Phone className="h-3 w-3" />
+                                      <span>{contact.phone}</span>
+                                    </span>
+                                  )}
+                                  <span className="flex items-center space-x-1">
+                                    <Mail className="h-3 w-3" />
+                                    <span>Pageidauja: {getContactMethodLabel(contact.preferred_contact)}</span>
+                                  </span>
+                                </div>
+
+                                {isExpanded && (
+                                  <div className="mt-4 pt-4 border-t border-gray-200">
+                                    <h5 className="text-sm font-semibold text-gray-800 mb-2">Išsami informacija:</h5>
+                                    <div className="grid grid-cols-2 gap-4 text-sm">
+                                      <div>
+                                        <span className="font-medium text-gray-600">Vardas:</span>
+                                        <span className="ml-2 text-gray-900">{contact.name}</span>
+                                      </div>
+                                      <div>
+                                        <span className="font-medium text-gray-600">El. paštas:</span>
+                                        <span className="ml-2 text-gray-900">{contact.email}</span>
+                                      </div>
+                                      {contact.phone && (
+                                        <div>
+                                          <span className="font-medium text-gray-600">Telefonas:</span>
+                                          <span className="ml-2 text-gray-900">{contact.phone}</span>
+                                        </div>
+                                      )}
+                                      <div>
+                                        <span className="font-medium text-gray-600">Skubumas:</span>
+                                        <span className="ml-2 text-gray-900">{getUrgencyLabel(contact.urgency)}</span>
+                                      </div>
+                                      <div>
+                                        <span className="font-medium text-gray-600">Kontaktas:</span>
+                                        <span className="ml-2 text-gray-900">{getContactMethodLabel(contact.preferred_contact)}</span>
+                                      </div>
+                                      <div>
+                                        <span className="font-medium text-gray-600">Sukurta:</span>
+                                        <span className="ml-2 text-gray-900">{new Date(contact.created_at).toLocaleString('lt-LT')}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleContactReadStatus(contact.id);
+                                  }}
+                                  className={`p-2 rounded-lg transition-colors ${
+                                    isRead 
+                                      ? 'text-gray-400 hover:text-gray-600 hover:bg-gray-50' 
+                                      : 'text-blue-600 hover:text-blue-800 hover:bg-blue-50'
+                                  }`}
+                                  title={isRead ? "Pažymėti kaip neperskaitytą" : "Pažymėti kaip perskaitytą"}
+                                >
+                                  {isRead ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (contact.is_resolved) {
+                                      handleUnresolveContact(contact.id);
+                                    } else {
+                                      handleResolveContact(contact.id);
+                                    }
+                                  }}
+                                  className={`p-2 rounded-lg transition-colors ${
+                                    contact.is_resolved
+                                      ? 'text-orange-600 hover:text-orange-800 hover:bg-orange-50'
+                                      : 'text-green-600 hover:text-green-800 hover:bg-green-50'
+                                  }`}
+                                  title={contact.is_resolved ? "Pažymėti kaip neišspręstą" : "Pažymėti kaip išspręstą"}
+                                >
+                                  {contact.is_resolved ? <Clock className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
+                                </button>
+                                <div className="text-gray-400">
+                                  {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Reviews Tab (Atsiliepimai) */}
+                {activeTab === 'atsiliepimai' && (
+                  <div>
+                    <div className="flex justify-between items-center mb-6">
+                      <h3 className="text-xl font-semibold text-gray-900">Atsiliepimai</h3>
+                      <button
+                        onClick={loadReviews}
+                        className="text-teal-600 hover:text-teal-800 text-sm font-medium"
+                      >
+                        Atnaujinti
+                      </button>
+                    </div>
+
+                    {/* Filter Controls for Reviews */}
+                    <div className="bg-gray-50 rounded-lg p-4 mb-6 space-y-4">
+                      {/* Search Bar */}
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                        <input
+                          type="text"
+                          placeholder="Ieškoti pagal vardą, el. paštą, komentarą..."
+                          value={reviewSearchQuery}
+                          onChange={(e) => setReviewSearchQuery(e.target.value)}
+                          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        />
+                      </div>
+
+                      {/* Filter Dropdowns */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Reitingas</label>
+                          <select
+                            value={ratingFilter}
+                            onChange={(e) => setRatingFilter(e.target.value as any)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                          >
+                            <option value="all">Visi</option>
+                            <option value="5">5 žvaigždutės</option>
+                            <option value="4">4 žvaigždutės</option>
+                            <option value="3">3 žvaigždutės</option>
+                            <option value="2">2 žvaigždutės</option>
+                            <option value="1">1 žvaigždutė</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Patvirtinimas</label>
+                          <select
+                            value={approvalFilter}
+                            onChange={(e) => setApprovalFilter(e.target.value as any)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                          >
+                            <option value="all">Visi</option>
+                            <option value="approved">Patvirtinti</option>
+                            <option value="pending">Laukia patvirtinimo</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Active Filters Display */}
+                      {(reviewSearchQuery || ratingFilter !== 'all' || approvalFilter !== 'all') && (
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm text-gray-600">Aktyvūs filtrai:</span>
+                          {reviewSearchQuery && (
+                            <span className="px-2 py-1 bg-teal-100 text-teal-800 text-xs rounded-full">
+                              Paieška: {reviewSearchQuery}
+                            </span>
+                          )}
+                          {ratingFilter !== 'all' && (
+                            <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+                              Reitingas: {ratingFilter} ⭐
+                            </span>
+                          )}
+                          {approvalFilter !== 'all' && (
+                            <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                              Statusas: {approvalFilter === 'approved' ? 'Patvirtinti' : 'Laukia patvirtinimo'}
+                            </span>
+                          )}
+                          <button
+                            onClick={() => {
+                              setReviewSearchQuery('');
+                              setRatingFilter('all');
+                              setApprovalFilter('all');
+                            }}
+                            className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full hover:bg-gray-200"
+                          >
+                            Išvalyti visus
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-4">
+                      {getFilteredReviews().length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">
+                          {reviewSearchQuery || ratingFilter !== 'all' || approvalFilter !== 'all'
+                            ? 'Nerasta atsiliepimų atitinkančių filtro kriterijus'
+                            : 'Atsiliepimų nėra'
+                          }
+                        </div>
+                      ) : (
+                        getFilteredReviews().map((review) => (
                           <div
-                            key={message.id}
-                            onClick={() => { setSelectedMessage(message); setShowMessageModal(true); }}
-                            className="p-4 rounded-lg border bg-white border-gray-200 hover:shadow-md transition-all duration-200 cursor-pointer"
+                            key={review.id}
+                            className={`p-4 rounded-lg border bg-white border-gray-200 hover:shadow-md transition-all duration-200 ${highlightedItemId === `review-${review.id}` ? 'ring-2 ring-teal-500 bg-teal-50 animate-pulse' : ''}`}
                           >
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
                                 <div className="flex items-center space-x-3 mb-2">
-                                  <h4 className="font-semibold text-gray-900">{message.name}</h4>
-                                  <span className="text-sm text-gray-500">({message.email})</span>
-                                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                                    message.type === 'contact' 
-                                      ? 'bg-blue-100 text-blue-800' 
-                                      : 'bg-purple-100 text-purple-800'
-                                  }`}>
-                                    {message.type === 'contact' ? 'Kontaktas' : 'Atsiliepimas'}
-                                  </span>
-                                  
-                                  {/* Additional badges for contact messages */}
-                                  {message.type === 'contact' && message.urgency && (
-                                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getUrgencyBadgeColor(message.urgency)}`}>
-                                      {message.urgency === 'emergency' ? 'Labai skubus' : 
-                                       message.urgency === 'urgent' ? 'Skubus' : 'Įprastas'}
+                                  <h4 className="font-semibold text-gray-900">{review.name}</h4>
+                                  <span className="text-sm text-gray-500">({review.email})</span>
+                                  <div className="flex items-center space-x-1">
+                                    {Array.from({ length: 5 }, (_, i) => (
+                                      <Star
+                                        key={i}
+                                        className={`h-4 w-4 ${
+                                          i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
+                                        }`}
+                                      />
+                                    ))}
+                                    <span className="text-sm text-gray-500 ml-1">({review.rating}/5)</span>
+                                  </div>
+                                  {review.is_approved ? (
+                                    <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                                      Patvirtintas
                                     </span>
-                                  )}
-                                  
-                                  {/* Rating for review messages */}
-                                  {message.type === 'review' && message.rating && (
-                                    <div className="flex items-center space-x-1">
-                                      {Array.from({ length: 5 }, (_, i) => (
-                                        <Star
-                                          key={i}
-                                          className={`h-4 w-4 ${
-                                            i < message.rating! ? 'text-yellow-400 fill-current' : 'text-gray-300'
-                                          }`}
-                                        />
-                                      ))}
-                                      <span className="text-sm text-gray-500 ml-1">({message.rating}/5)</span>
-                                    </div>
+                                  ) : (
+                                    <span className="px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800">
+                                      Laukia patvirtinimo
+                                    </span>
                                   )}
                                 </div>
                                 
-                                {/* Subject line for contacts */}
-                                {message.type === 'contact' && message.subject && (
-                                  <p className="text-sm font-medium text-gray-700 mb-1">Tema: {message.subject}</p>
+                                {review.trip_reference && (
+                                  <p className="text-sm font-medium text-gray-700 mb-1">Kelionė: {review.trip_reference}</p>
                                 )}
                                 
-                                {/* Message preview */}
-                                <p className="text-sm text-gray-600 mb-2 line-clamp-2">
-                                  {message.message.length > 120 
-                                    ? `${message.message.substring(0, 120)}...` 
-                                    : message.message
-                                  }
+                                <p className="text-sm text-gray-600 mb-2">
+                                  {review.comment}
                                 </p>
                                 
-                                {/* Additional contact info */}
                                 <div className="flex items-center space-x-4 text-xs text-gray-500">
-                                  <span>{new Date(message.created_at).toLocaleString('lt-LT')}</span>
-                                  {message.phone && (
-                                    <span className="flex items-center space-x-1">
-                                      <Phone className="h-3 w-3" />
-                                      <span>{message.phone}</span>
-                                    </span>
-                                  )}
-                                  {message.type === 'contact' && message.preferred_contact && (
-                                    <span className="flex items-center space-x-1">
-                                      <Mail className="h-3 w-3" />
-                                      <span>Pageidauja: {getContactMethodLabel(message.preferred_contact)}</span>
-                                    </span>
-                                  )}
+                                  <span>{new Date(review.created_at).toLocaleString('lt-LT')}</span>
                                 </div>
                               </div>
                               <div className="flex items-center space-x-2">
-                                <Eye className="h-4 w-4 text-teal-600" />
+                                {!review.is_approved && (
+                                  <button
+                                    onClick={() => handleApproveReview(review.id)}
+                                    className="text-green-600 hover:text-green-800 p-2 rounded-lg hover:bg-green-50"
+                                    title="Patvirtinti atsiliepimą"
+                                  >
+                                    <CheckCircle className="h-4 w-4" />
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => handleDeleteReview(review.id)}
+                                  className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50"
+                                  title="Ištrinti atsiliepimą"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
                               </div>
                             </div>
                           </div>
@@ -1246,152 +1731,7 @@ const DashboardPage = () => {
         </div>
       </main>
 
-      {/* Message Detail Modal */}
-      {showMessageModal && selectedMessage && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-start mb-6">
-              <h3 className="text-xl font-semibold text-gray-900">
-                {selectedMessage.type === 'contact' ? 'Kontakto detalės' : 'Atsiliepimo detalės'}
-              </h3>
-              <button
-                onClick={() => setShowMessageModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <Eye className="h-6 w-6" />
-              </button>
-            </div>
-
-            <div className="space-y-6">
-              {/* Header Info */}
-              <div className="border-b border-gray-200 pb-4">
-                <div className="flex items-center space-x-3 mb-3">
-                  <div className="w-12 h-12 bg-teal-100 rounded-full flex items-center justify-center">
-                    <User className="h-6 w-6 text-teal-600" />
-                  </div>
-                  <div>
-                    <h4 className="text-lg font-semibold text-gray-900">{selectedMessage.name}</h4>
-                    <p className="text-gray-600">{selectedMessage.email}</p>
-                    {selectedMessage.phone && (
-                      <p className="text-gray-600 flex items-center space-x-1">
-                        <Phone size={14} />
-                        <span>{selectedMessage.phone}</span>
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  {/* Type Badge */}
-                  <span className={`px-3 py-1 text-sm font-medium rounded-full ${
-                    selectedMessage.type === 'contact' 
-                      ? 'bg-blue-100 text-blue-800' 
-                      : 'bg-purple-100 text-purple-800'
-                  }`}>
-                    {selectedMessage.type === 'contact' ? 'Kontaktas' : 'Atsiliepimas'}
-                  </span>
-
-                  {/* Urgency Badge for contacts */}
-                  {selectedMessage.type === 'contact' && selectedMessage.urgency && (
-                    <span className={`px-3 py-1 text-sm font-medium rounded-full ${getUrgencyBadgeColor(selectedMessage.urgency)}`}>
-                      {getUrgencyLabel(selectedMessage.urgency)}
-                    </span>
-                  )}
-
-                  {/* Rating for reviews */}
-                  {selectedMessage.type === 'review' && selectedMessage.rating && (
-                    <div className="flex items-center space-x-1">
-                      {Array.from({ length: 5 }, (_, i) => (
-                        <Star
-                          key={i}
-                          size={20}
-                          className={`${
-                            i < selectedMessage.rating! ? 'text-yellow-400 fill-current' : 'text-gray-300'
-                          }`}
-                        />
-                      ))}
-                      <span className="text-sm text-gray-600 ml-2">({selectedMessage.rating}/5)</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Contact Details */}
-              {selectedMessage.type === 'contact' && (
-                <div>
-                  <h5 className="text-sm font-semibold text-gray-900 mb-3">Kontakto informacija</h5>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {selectedMessage.subject && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Tema</label>
-                        <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">{selectedMessage.subject}</p>
-                      </div>
-                    )}
-                    {selectedMessage.preferred_contact && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Pageidaujamas ryšio būdas</label>
-                        <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">{getContactMethodLabel(selectedMessage.preferred_contact)}</p>
-                      </div>
-                    )}
-                    {selectedMessage.urgency && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Skubumas</label>
-                        <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">{getUrgencyLabel(selectedMessage.urgency)}</p>
-                      </div>
-                    )}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Pateikimo data</label>
-                      <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
-                        {new Date(selectedMessage.created_at).toLocaleString('lt-LT')}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Message Content */}
-              <div>
-                <h5 className="text-sm font-semibold text-gray-900 mb-3">
-                  {selectedMessage.type === 'contact' ? 'Žinutė' : 'Atsiliepimas'}
-                </h5>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-gray-900 whitespace-pre-wrap">{selectedMessage.message}</p>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
-                {selectedMessage.type === 'contact' && (
-                  <>
-                    <button
-                      onClick={() => window.location.href = `mailto:${selectedMessage.email}`}
-                      className="flex items-center space-x-2 px-4 py-2 text-teal-600 hover:text-teal-800 border border-teal-600 hover:border-teal-800 rounded-lg transition-colors"
-                    >
-                      <Mail size={16} />
-                      <span>Atsakyti el. paštu</span>
-                    </button>
-                    {selectedMessage.phone && (
-                      <button
-                        onClick={() => window.location.href = `tel:${selectedMessage.phone}`}
-                        className="flex items-center space-x-2 px-4 py-2 text-green-600 hover:text-green-800 border border-green-600 hover:border-green-800 rounded-lg transition-colors"
-                      >
-                        <Phone size={16} />
-                        <span>Skambinti</span>
-                      </button>
-                    )}
-                  </>
-                )}
-                <button
-                  onClick={() => setShowMessageModal(false)}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                >
-                  Uždaryti
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Message Detail Modal - Removed as it's no longer needed with separated tabs */}
 
       {/* Gallery Modal */}
       {showGalleryModal && (
