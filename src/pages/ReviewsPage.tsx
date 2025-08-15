@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Star, ChevronLeft, ChevronRight, Quote, Calendar, X, Send, ThumbsUp } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Star, ChevronLeft, ChevronRight, Quote, Filter, Calendar, MapPin, ThumbsUp, ChevronDown, X, Send, CheckCircle } from 'lucide-react';
+import { sendFeedbackEmail } from '../services/emailService';
 import { reviewsAPI } from '../services/adminApiService';
 
 interface Review {
@@ -17,11 +19,13 @@ const ReviewsPage = () => {
 
   const handleWriteReview = () => {
     setShowReviewForm(true);
+    setShowReviewForm(true);
   };
 
   const [currentReview, setCurrentReview] = useState(0);
   const [filterRating, setFilterRating] = useState('all');
   const [showReviewForm, setShowReviewForm] = useState(false);
+  const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const [reviewForm, setReviewForm] = useState({
     name: '',
     email: '',
@@ -141,6 +145,29 @@ const ReviewsPage = () => {
     } finally {
       setIsSubmitting(false);
     }
+    try {
+      // Send email with feedback
+      await sendFeedbackEmail({
+        name: reviewForm.name,
+        email: reviewForm.email,
+        description: reviewForm.description,
+        rating: reviewForm.rating,
+        category: reviewForm.category
+      });
+      setShowReviewForm(false);
+      
+      // Show beautiful success notification
+      setShowSuccessNotification(true);
+      
+      // Auto-hide notification after 5 seconds
+      setTimeout(() => {
+        setShowSuccessNotification(false);
+      }, 5000);
+      
+    } catch (error) {
+      console.error('Error sending feedback:', error);
+      alert('Įvyko klaida siunčiant atsiliepimą. Bandykite dar kartą.');
+    }
   };
 
   const handleFormClose = () => {
@@ -171,6 +198,74 @@ const ReviewsPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 pt-24">
+      {/* Success Notification */}
+      {showSuccessNotification && (
+        <div className="fixed top-24 right-4 z-50 animate-slide-in-right">
+          <div className="bg-white rounded-2xl shadow-2xl border-l-4 border-green-500 p-6 max-w-sm transform transition-all duration-500 ease-out">
+            <div className="flex items-start space-x-4">
+              <div className="flex-shrink-0">
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                  <CheckCircle className="text-green-600" size={24} />
+                </div>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-gray-800 mb-1">
+                  Ačiū už atsiliepimą!
+                </h3>
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  Jūsų atsiliepimas buvo sėkmingai išsiųstas ir bus peržiūrėtas. Jis padės kitiems keliautojams pasirinkti tinkamą kelionę.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowSuccessNotification(false)}
+                className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            {/* Progress bar */}
+            <div className="mt-4 w-full bg-gray-200 rounded-full h-1">
+              <div className="bg-green-500 h-1 rounded-full animate-progress-bar"></div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Notification */}
+      {showSuccessNotification && (
+        <div className="fixed top-24 right-4 z-50 animate-slide-in-right">
+          <div className="bg-white rounded-2xl shadow-2xl border-l-4 border-green-500 p-6 max-w-sm transform transition-all duration-500 ease-out">
+            <div className="flex items-start space-x-4">
+              <div className="flex-shrink-0">
+                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                  <CheckCircle className="text-green-600" size={24} />
+                </div>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-gray-800 mb-1">
+                  Ačiū už atsiliepimą!
+                </h3>
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  Jūsų atsiliepimas buvo sėkmingai išsiųstas ir bus peržiūrėtas. Jis padės kitiems keliautojams pasirinkti tinkamą kelionę.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowSuccessNotification(false)}
+                className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            {/* Progress bar */}
+            <div className="mt-4 w-full bg-gray-200 rounded-full h-1">
+              <div className="bg-green-500 h-1 rounded-full animate-progress-bar"></div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="container mx-auto px-4 py-8">
         {/* Page Header */}
         <div className="text-center mb-16">
