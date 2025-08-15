@@ -127,6 +127,15 @@ const ReviewsPage = () => {
         tripReference: reviewForm.tripReference || undefined
       });
 
+      // Send email with feedback
+      await sendFeedbackEmail({
+        name: reviewForm.name,
+        email: reviewForm.email,
+        description: reviewForm.description,
+        rating: reviewForm.rating,
+        category: reviewForm.category
+      });
+
       // Reset form and close
       setReviewForm({
         name: '',
@@ -135,24 +144,6 @@ const ReviewsPage = () => {
         rating: 0,
         category: 'vacation',
         tripReference: ''
-      });
-      setShowReviewForm(false);
-      
-      alert('Ačiū už jūsų atsiliepimą! Jis bus peržiūrėtas ir patvirtintas.');
-    } catch (error) {
-      console.error('Error submitting review:', error);
-      alert('Atsiprašome, įvyko klaida. Bandykite dar kartą.');
-    } finally {
-      setIsSubmitting(false);
-    }
-    try {
-      // Send email with feedback
-      await sendFeedbackEmail({
-        name: reviewForm.name,
-        email: reviewForm.email,
-        description: reviewForm.description,
-        rating: reviewForm.rating,
-        category: reviewForm.category
       });
       setShowReviewForm(false);
       
@@ -165,8 +156,10 @@ const ReviewsPage = () => {
       }, 5000);
       
     } catch (error) {
-      console.error('Error sending feedback:', error);
-      alert('Įvyko klaida siunčiant atsiliepimą. Bandykite dar kartą.');
+      console.error('Error submitting review:', error);
+      alert('Atsiprašome, įvyko klaida. Bandykite dar kartą.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

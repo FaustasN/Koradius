@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { MapPin, Clock, Star, ArrowRight } from 'lucide-react';
+import { MapPin, Clock, Star, ArrowRight, X, Calendar, Users, Phone, Mail, User } from 'lucide-react';
 import { travelPacketsApi, transformTravelPacket } from '../services/apiService';
 
 const FeaturedTours = () => {
@@ -9,6 +9,19 @@ const FeaturedTours = () => {
   // Database state
   const [tours, setTours] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Booking form state
+  const [showBookingForm, setShowBookingForm] = useState(false);
+  const [selectedTour, setSelectedTour] = useState<any>(null);
+  const [bookingForm, setBookingForm] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    departureDate: '',
+    returnDate: '',
+    numberOfPeople: 1
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Load featured tours from database
   useEffect(() => {
@@ -29,12 +42,57 @@ const FeaturedTours = () => {
     loadFeaturedTours();
   }, []);
 
-  const handleBookNow = (tourId: number) => {
-    navigate(`/search?tour=${tourId}`);
+  const handleBookNow = (tour: any) => {
+    setSelectedTour(tour);
+    setShowBookingForm(true);
+    // Reset form
+    setBookingForm({
+      name: '',
+      phone: '',
+      email: '',
+      departureDate: '',
+      returnDate: '',
+      numberOfPeople: 1
+    });
   };
 
   const handleMoreInfo = (tourId: number) => {
     navigate(`/search?tour=${tourId}&details=true`);
+  };
+
+  const handleBookingSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!bookingForm.name.trim() || !bookingForm.phone.trim() || !bookingForm.email.trim() || 
+        !bookingForm.departureDate || !bookingForm.returnDate || bookingForm.numberOfPeople < 1) {
+      alert('Prašome užpildyti visus laukus');
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    try {
+      // Here you would typically send the booking data to your backend
+      console.log('Booking submitted:', {
+        tour: selectedTour,
+        customer: bookingForm
+      });
+      
+      // For now, just show success message and close form
+      alert('Užsakymas sėkmingai išsiųstas! Netrukus susisieksime su jumis.');
+      setShowBookingForm(false);
+      
+    } catch (error) {
+      console.error('Error submitting booking:', error);
+      alert('Atsiprašome, įvyko klaida. Bandykite dar kartą.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleFormClose = () => {
+    setShowBookingForm(false);
+    setSelectedTour(null);
   };
 
   const getBadgeColor = (badge: string) => {
@@ -58,8 +116,6 @@ const FeaturedTours = () => {
             Atraskite mūsų populiariausius ir geriausiai įvertintus kelionių pasiūlymus
           </p>
         </div>
-
-
 
         {/* Tours Grid */}
         {loading ? (
@@ -143,7 +199,7 @@ const FeaturedTours = () => {
                 {/* Action Buttons */}
                 <div className="flex space-x-3">
                   <button 
-                    onClick={() => handleBookNow(tour.id)}
+                    onClick={() => handleBookNow(tour)}
                     className="flex-1 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg btn-hover-smooth"
                   >
                     Užsisakyti dabar
@@ -166,6 +222,177 @@ const FeaturedTours = () => {
           </Link>
         </div>
       </div>
+
+      {/* Booking Form Modal */}
+      {showBookingForm && selectedTour && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div className="flex items-center space-x-3">
+                <div className="bg-gradient-to-r from-teal-500 to-teal-600 p-3 rounded-full">
+                  <Calendar className="text-white" size={24} />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-800">Užsakyti kelionę</h2>
+                  <p className="text-sm text-gray-600">{selectedTour.title}</p>
+                </div>
+              </div>
+              <button
+                onClick={handleFormClose}
+                className="text-gray-400 hover:text-gray-600 transition-colors duration-200"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleBookingSubmit} className="p-6 space-y-6">
+              {/* Name Input */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <User size={16} className="inline mr-2" />
+                  Jūsų vardas *
+                </label>
+                <input
+                  type="text"
+                  value={bookingForm.name}
+                  onChange={(e) => setBookingForm(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200"
+                  placeholder="Įveskite savo vardą"
+                  required
+                />
+              </div>
+
+              {/* Phone Input */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <Phone size={16} className="inline mr-2" />
+                  Telefono numeris *
+                </label>
+                <input
+                  type="tel"
+                  value={bookingForm.phone}
+                  onChange={(e) => setBookingForm(prev => ({ ...prev, phone: e.target.value }))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200"
+                  placeholder="+370 6XX XXXXX"
+                  required
+                />
+              </div>
+
+              {/* Email Input */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <Mail size={16} className="inline mr-2" />
+                  El. paštas *
+                </label>
+                <input
+                  type="email"
+                  value={bookingForm.email}
+                  onChange={(e) => setBookingForm(prev => ({ ...prev, email: e.target.value }))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200"
+                  placeholder="Įveskite savo el. paštą"
+                  required
+                />
+              </div>
+
+              {/* Date Selection */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <Calendar size={16} className="inline mr-2" />
+                    Išvykimo data *
+                  </label>
+                  <input
+                    type="date"
+                    value={bookingForm.departureDate}
+                    onChange={(e) => setBookingForm(prev => ({ ...prev, departureDate: e.target.value }))}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200"
+                    min={new Date().toISOString().split('T')[0]}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <Calendar size={16} className="inline mr-2" />
+                    Grįžimo data *
+                  </label>
+                  <input
+                    type="date"
+                    value={bookingForm.returnDate}
+                    onChange={(e) => setBookingForm(prev => ({ ...prev, returnDate: e.target.value }))}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200"
+                    min={bookingForm.departureDate || new Date().toISOString().split('T')[0]}
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Number of People */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <Users size={16} className="inline mr-2" />
+                  Asmenų skaičius *
+                </label>
+                <input
+                  type="number"
+                  value={bookingForm.numberOfPeople}
+                  onChange={(e) => setBookingForm(prev => ({ ...prev, numberOfPeople: parseInt(e.target.value) || 1 }))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200"
+                  min="1"
+                  max="20"
+                  required
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  Maksimalus asmenų skaičius: 20
+                </p>
+              </div>
+
+              {/* Tour Summary */}
+              <div className="bg-gray-50 rounded-xl p-4">
+                <h4 className="font-semibold text-gray-800 mb-3">Kelionės informacija:</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">Kelionė:</span>
+                    <p className="font-medium">{selectedTour.title}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Kaina:</span>
+                    <p className="font-medium text-teal-600">{selectedTour.price}€</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Vieta:</span>
+                    <p className="font-medium">{selectedTour.location}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Trukmė:</span>
+                    <p className="font-medium">{selectedTour.duration}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <div className="flex space-x-4 pt-4">
+                <button
+                  type="button"
+                  onClick={handleFormClose}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-6 rounded-xl transition-all duration-200"
+                >
+                  Atšaukti
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex-1 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 disabled:hover:scale-100 flex items-center justify-center space-x-2"
+                >
+                  <span>{isSubmitting ? 'Siunčiama...' : 'Perku'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </section>
   );
 };
