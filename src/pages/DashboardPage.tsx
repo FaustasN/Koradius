@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { LogOut, Settings, Image, MessageSquare, Clock, Plus, Edit, Trash2, Bell, Package, Database, Search, Star, Phone, Mail, Home, CheckCircle, Eye, EyeOff, ChevronUp, ChevronDown, BarChart3 } from 'lucide-react';
 import ImageUpload from '../components/ImageUpload';
 import GoogleAnalytics from '../components/GoogleAnalytics';
-import { notificationsAPI, contactsAPI, reviewsAPI, galleryAPI, travelPacketsAPI } from '../services/adminApiService';
+import { notificationsAPI, contactsAPI, reviewsAPI } from '../services/adminApiService';
+import { useNotificationManager } from '../utils/notificationUtils';
 
 // Types for our data structures
 interface GalleryItem {
@@ -93,6 +94,7 @@ interface Message {
 const DashboardPage = () => {
   const { logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const notificationManager = useNotificationManager();
   const [userInfo, setUserInfo] = useState<{ username: string; role: string; exp: number } | null>(null);
   const [timeUntilExpiry, setTimeUntilExpiry] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'gallery' | 'packets' | 'zinutes' | 'atsiliepimai' | 'analytics'>('gallery');
@@ -233,6 +235,28 @@ const DashboardPage = () => {
       return () => clearInterval(interval);
     }
   }, [userInfo, logout, navigate]);
+
+  // Initialize notification manager (without asking for permission immediately)
+  useEffect(() => {
+    // Just cleanup on unmount, don't request permission yet
+    return () => {
+      notificationManager.dispose();
+    };
+  }, [notificationManager]);
+
+  // Update browser title based on unread notifications
+  useEffect(() => {
+    if (unreadCount > 0) {
+      notificationManager.updateTitleWithCount(unreadCount);
+      // Start flashing for high priority notifications or when count > 5
+      const hasHighPriorityUnread = notifications.some(n => !n.isRead && n.priority === 'high');
+      if (hasHighPriorityUnread || unreadCount > 5) {
+        notificationManager.startTitleFlashing(unreadCount);
+      }
+    } else {
+      notificationManager.stopTitleFlashing();
+    }
+  }, [unreadCount, notifications, notificationManager]);
 
   // Load all data when component mounts and user is authenticated
   useEffect(() => {
@@ -407,18 +431,31 @@ const DashboardPage = () => {
       }));
       
       // Check if we have new notifications
-      const currentCount = notifications.filter(n => !n.isRead).length;
-        const newCount = transformedData.filter(n => !n.isRead).length;
+      const currentUnreadIds = new Set(notifications.filter(n => !n.isRead).map(n => n.id));
+      const newUnreadNotifications = transformedData.filter(n => !n.isRead && !currentUnreadIds.has(n.id));
+      const newCount = transformedData.filter(n => !n.isRead).length;
         
-      // If we have more unread notifications, show a visual indicator
-      if (newCount > currentCount && currentCount > 0) {
-        setHasNewNotifications(true);
-        // Reset the indicator after 5 seconds
-        setTimeout(() => setHasNewNotifications(false), 5000);
-        console.log(`New notification received! Total unread: ${newCount}`);
-      }
-      
-      setNotifications(transformedData);
+        // Handle new notifications (only if we actually have new ones, not on initial load)
+        if (newUnreadNotifications.length > 0 && notifications.length > 0) {
+          setHasNewNotifications(true);
+          // Reset the indicator after 5 seconds
+          setTimeout(() => setHasNewNotifications(false), 5000);
+          
+          // Request permission and show browser notification if granted
+          try {
+            const hasPermission = await notificationManager.requestPermission();
+            if (hasPermission) {
+              const notificationTitle = `New ${newUnreadNotifications[0].type} notification`;
+              notificationManager.showBrowserNotification(
+                notificationTitle,
+                newUnreadNotifications[0].message,
+                newUnreadNotifications[0].priority
+              );
+            }
+          } catch {
+            // Silent failure
+          }
+        }      setNotifications(transformedData);
       setUnreadCount(newCount);
     } catch (error) {
       console.error('Error loading notifications:', error);
