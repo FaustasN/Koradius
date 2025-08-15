@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { MapPin, Phone, Mail, Clock, Send, Facebook, Instagram, Youtube, MessageCircle, Calendar, User } from 'lucide-react';
 import StaggeredAnimation from '../components/StaggeredAnimation';
 import FadeInAnimation from '../components/FadeInAnimation';
+import { contactsAPI } from '../services/adminApiService';
 
 const ContactPage = () => {
   const [formData, setFormData] = useState({
@@ -28,20 +29,24 @@ const ContactPage = () => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Simulate form submission
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    alert('Ačiū už jūsų žinutę! Susisieksime su jumis per 24 valandas.');
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      subject: '',
-      message: '',
-      preferredContact: 'email',
-      urgency: 'normal'
-    });
-    setIsSubmitting(false);
+    try {
+      await contactsAPI.submit(formData);
+      alert('Ačiū už jūsų žinutę! Susisieksime su jumis per 24 valandas.');
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        subject: '',
+        message: '',
+        preferredContact: 'email',
+        urgency: 'normal'
+      });
+    } catch (error) {
+      console.error('Error submitting contact form:', error);
+      alert('Atsiprašome, įvyko klaida. Bandykite dar kartą arba susisiekite telefonu.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const contactInfo = [

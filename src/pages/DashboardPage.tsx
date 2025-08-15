@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Settings, Image, MessageSquare, Clock, Plus, Edit, Trash2, Eye, Bell, Package, Database } from 'lucide-react';
+import { LogOut, Settings, Image, MessageSquare, Clock, Plus, Edit, Trash2, Eye, Bell, Package, Database, Search, Filter, Star, Phone, Mail, User, Home } from 'lucide-react';
+import ImageUpload from '../components/ImageUpload';
+import { notificationsAPI, contactsAPI, reviewsAPI, galleryAPI, travelPacketsAPI } from '../services/adminApiService';
 
 // Types for our data structures
 interface GalleryItem {
@@ -37,7 +39,7 @@ interface TravelPacket {
 
 interface Notification {
   id: number;
-  type: 'review' | 'order' | 'system';
+  type: 'review' | 'order' | 'system' | 'contact';
   title: string;
   message: string;
   timestamp: string;
@@ -45,13 +47,69 @@ interface Notification {
   priority: 'low' | 'medium' | 'high';
 }
 
+interface Contact {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string;
+  subject: string;
+  message: string;
+  preferred_contact: string;
+  urgency: string;
+  is_resolved: boolean;
+  resolved_at?: string;
+  created_at: string;
+}
+
+interface Review {
+  id: number;
+  name: string;
+  email: string;
+  rating: number;
+  comment: string;
+  trip_reference?: string;
+  is_approved: boolean;
+  created_at: string;
+}
+
+interface Message {
+  id: string;
+  type: 'contact' | 'review';
+  name: string;
+  email: string;
+  phone?: string;
+  subject?: string;
+  message: string;
+  preferred_contact?: string;
+  urgency?: string;
+  rating?: number;
+  is_resolved?: boolean;
+  resolved_at?: string;
+  created_at: string;
+}
+
 const DashboardPage = () => {
-  const { logout } = useAuth();
+  const { logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [userInfo, setUserInfo] = useState<{ username: string; role: string; exp: number } | null>(null);
   const [timeUntilExpiry, setTimeUntilExpiry] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'gallery' | 'packets' | 'notifications'>('gallery');
+  const [activeTab, setActiveTab] = useState<'gallery' | 'packets' | 'messages'>('gallery');
   const [isLoading, setIsLoading] = useState(false);
+  const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
+
+  // Data state
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  
+  // Message filtering state
+  const [messageFilter, setMessageFilter] = useState<'all' | 'contact' | 'review'>('all');
+  const [urgencyFilter, setUrgencyFilter] = useState<'all' | 'normal' | 'urgent' | 'emergency'>('all');
+  const [subjectFilter, setSubjectFilter] = useState('');
+  const [contactMethodFilter, setContactMethodFilter] = useState<'all' | 'email' | 'phone' | 'both'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+  const [showMessageModal, setShowMessageModal] = useState(false);
 
   // Gallery state
   const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
@@ -80,7 +138,8 @@ const DashboardPage = () => {
     description: '',
     includes: '',
     availableSpots: '',
-    departure: ''
+    departure: '',
+    imageUrl: ''
   });
 
   // Notifications state
@@ -153,20 +212,37 @@ const DashboardPage = () => {
     }
   }, [userInfo, logout, navigate]);
 
-  // Load all data when component mounts
+  // Load all data when component mounts and user is authenticated
   useEffect(() => {
-    loadAllData();
-  }, []); // Empty dependency array means this runs once on mount
+    if (isAuthenticated) {
+      loadAllData();
+    }
+  }, [isAuthenticated]); // Run when authentication state changes
 
   // Set up real-time notification polling
   useEffect(() => {
-    // Poll for new notifications every 30 seconds
-    const notificationInterval = setInterval(() => {
-      loadNotifications();
-    }, 30000); // 30 seconds
+    if (isAuthenticated) {
+      // Poll for new notifications every 30 seconds
+      const notificationInterval = setInterval(() => {
+        loadNotifications();
+      }, 30000); // 30 seconds
 
-    return () => clearInterval(notificationInterval);
-  }, []);
+      return () => clearInterval(notificationInterval);
+    }
+  }, [isAuthenticated]);
+
+  // Close notifications dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (showNotificationsDropdown && !target.closest('.notifications-dropdown')) {
+        setShowNotificationsDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showNotificationsDropdown]);
 
   const loadAllData = async () => {
     setIsLoading(true);
@@ -175,7 +251,9 @@ const DashboardPage = () => {
       await Promise.all([
         loadGalleryItems(),
         loadTravelPackets(),
-        loadNotifications()
+        loadNotifications(),
+        loadContacts(),
+        loadReviews()
       ]);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -252,41 +330,144 @@ const DashboardPage = () => {
 
   const loadNotifications = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/notifications');
+      const data = await notificationsAPI.getAll();
       
-      if (response.ok) {
-        const data = await response.json();
-        
-        // Transform API data to match our interface
-        const transformedData: Notification[] = data.map((item: any) => ({
-          id: item.id,
-          type: item.type,
-          title: item.title,
-          message: item.message,
-          timestamp: item.timestamp,
-          isRead: item.is_read,
-          priority: item.priority
-        }));
-        
-        // Check if we have new notifications
-        const currentCount = notifications.filter(n => !n.isRead).length;
+      // Transform API data to match our interface
+      const transformedData: Notification[] = data.map((item: any) => ({
+        id: item.id,
+        type: item.type,
+        title: item.title,
+        message: item.message,
+        timestamp: item.timestamp,
+        isRead: item.is_read,
+        priority: item.priority
+      }));
+      
+      // Check if we have new notifications
+      const currentCount = notifications.filter(n => !n.isRead).length;
         const newCount = transformedData.filter(n => !n.isRead).length;
         
-        // If we have more unread notifications, show a visual indicator
-        if (newCount > currentCount && currentCount > 0) {
-          setHasNewNotifications(true);
-          // Reset the indicator after 5 seconds
-          setTimeout(() => setHasNewNotifications(false), 5000);
-          console.log(`New notification received! Total unread: ${newCount}`);
-        }
-        
-        setNotifications(transformedData);
-        setUnreadCount(newCount);
-      } else {
-        throw new Error('Failed to fetch notifications');
+      // If we have more unread notifications, show a visual indicator
+      if (newCount > currentCount && currentCount > 0) {
+        setHasNewNotifications(true);
+        // Reset the indicator after 5 seconds
+        setTimeout(() => setHasNewNotifications(false), 5000);
+        console.log(`New notification received! Total unread: ${newCount}`);
       }
+      
+      setNotifications(transformedData);
+      setUnreadCount(newCount);
     } catch (error) {
       console.error('Error loading notifications:', error);
+    }
+  };
+
+  const loadContacts = async () => {
+    try {
+      const data = await contactsAPI.getAll();
+      setContacts(data);
+      combineMessages(data, reviews);
+    } catch (error) {
+      console.error('Error loading contacts:', error);
+    }
+  };
+
+  const loadReviews = async () => {
+    try {
+      const data = await reviewsAPI.getAll();
+      setReviews(data);
+      combineMessages(contacts, data);
+    } catch (error) {
+      console.error('Error loading reviews:', error);
+    }
+  };
+
+  const combineMessages = (contactsData: Contact[], reviewsData: Review[]) => {
+    const combinedMessages: Message[] = [
+      ...contactsData.map(contact => ({
+        id: `contact-${contact.id}`,
+        type: 'contact' as const,
+        name: contact.name,
+        email: contact.email,
+        phone: contact.phone,
+        subject: contact.subject,
+        message: contact.message,
+        preferred_contact: contact.preferred_contact,
+        urgency: contact.urgency,
+        is_resolved: contact.is_resolved,
+        resolved_at: contact.resolved_at,
+        created_at: contact.created_at
+      })),
+      ...reviewsData.map(review => ({
+        id: `review-${review.id}`,
+        type: 'review' as const,
+        name: review.name,
+        email: review.email,
+        message: review.comment,
+        rating: review.rating,
+        created_at: review.created_at
+      }))
+    ];
+    
+    // Sort by created_at descending (newest first)
+    combinedMessages.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    setMessages(combinedMessages);
+  };
+
+  const getFilteredMessages = () => {
+    return messages.filter(message => {
+      // Type filter
+      if (messageFilter !== 'all' && message.type !== messageFilter) return false;
+      
+      // Urgency filter (only for contact messages)
+      if (urgencyFilter !== 'all' && message.type === 'contact' && message.urgency !== urgencyFilter) return false;
+      
+      // Subject filter (only for contact messages)
+      if (subjectFilter && message.type === 'contact' && !message.subject?.toLowerCase().includes(subjectFilter.toLowerCase())) return false;
+      
+      // Contact method filter (only for contact messages)
+      if (contactMethodFilter !== 'all' && message.type === 'contact' && message.preferred_contact !== contactMethodFilter) return false;
+      
+      // Search query filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        return (
+          message.name.toLowerCase().includes(query) ||
+          message.email.toLowerCase().includes(query) ||
+          message.message.toLowerCase().includes(query) ||
+          (message.phone && message.phone.toLowerCase().includes(query)) ||
+          (message.subject && message.subject.toLowerCase().includes(query))
+        );
+      }
+      
+      return true;
+    });
+  };
+
+  const getUrgencyBadgeColor = (urgency: string) => {
+    switch (urgency) {
+      case 'emergency': return 'bg-red-100 text-red-800';
+      case 'urgent': return 'bg-orange-100 text-orange-800';
+      case 'normal': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getUrgencyLabel = (urgency: string) => {
+    switch (urgency) {
+      case 'emergency': return 'Labai skubus';
+      case 'urgent': return 'Skubus';
+      case 'normal': return 'Įprastas';
+      default: return urgency;
+    }
+  };
+
+  const getContactMethodLabel = (method: string) => {
+    switch (method) {
+      case 'email': return 'El. paštas';
+      case 'phone': return 'Telefonas';
+      case 'both': return 'Abu būdai';
+      default: return method;
     }
   };
 
@@ -304,6 +485,10 @@ const DashboardPage = () => {
   const handleLogout = () => {
     logout();
     navigate('/dashboard/login');
+  };
+
+  const handleGoToHome = () => {
+    navigate('/');
   };
 
   // Gallery functions
@@ -389,7 +574,8 @@ const DashboardPage = () => {
       description: '',
       includes: '',
       availableSpots: '',
-      departure: ''
+      departure: '',
+      imageUrl: ''
     });
     setShowPacketModal(true);
   };
@@ -407,7 +593,8 @@ const DashboardPage = () => {
       description: packet.description,
       includes: packet.includes.join(', '),
       availableSpots: packet.availableSpots.toString(),
-      departure: packet.departure
+      departure: packet.departure,
+      imageUrl: packet.imageUrl
     });
     setShowPacketModal(true);
   };
@@ -472,15 +659,8 @@ const DashboardPage = () => {
   // Notification functions
   const markNotificationAsRead = async (id: number) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/notifications/${id}/read`, {
-        method: 'PUT'
-      });
-
-      if (response.ok) {
-        loadNotifications();
-      } else {
-        throw new Error('Failed to mark notification as read');
-      }
+      await notificationsAPI.markAsRead(id);
+      loadNotifications();
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
@@ -527,6 +707,92 @@ const DashboardPage = () => {
                   <span>{timeUntilExpiry}</span>
                 </div>
               </div>
+              
+              {/* Notifications Dropdown */}
+              <div className="relative notifications-dropdown">
+                <button
+                  onClick={() => setShowNotificationsDropdown(!showNotificationsDropdown)}
+                  className="relative flex items-center space-x-2 px-3 py-2 bg-gray-50 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+                >
+                  <Bell className="h-4 w-4" />
+                  {unreadCount > 0 && (
+                    <span className={`absolute -top-1 -right-1 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[18px] text-center ${
+                      hasNewNotifications 
+                        ? 'bg-red-500 animate-pulse' 
+                        : 'bg-red-500'
+                    }`}>
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+                
+                {/* Notifications Dropdown */}
+                {showNotificationsDropdown && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-96 overflow-y-auto">
+                    <div className="p-4 border-b border-gray-200">
+                      <h3 className="text-lg font-semibold text-gray-900">Pranešimai</h3>
+                      {unreadCount > 0 && (
+                        <p className="text-sm text-gray-500">{unreadCount} neperskaityti</p>
+                      )}
+                    </div>
+                    <div className="max-h-80 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="p-4 text-center text-gray-500">
+                          <Bell className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                          <p>Nėra pranešimų</p>
+                        </div>
+                      ) : (
+                        <div className="divide-y divide-gray-100">
+                          {notifications.slice(0, 10).map((notification) => (
+                            <div
+                              key={notification.id}
+                              className={`p-4 hover:bg-gray-50 transition-colors duration-200 cursor-pointer ${
+                                !notification.isRead ? 'bg-blue-50' : ''
+                              }`}
+                              onClick={() => markNotificationAsRead(notification.id)}
+                            >
+                              <div className="flex items-start space-x-3">
+                                <div className={`p-1 rounded-full ${getPriorityColor(notification.priority)}`}>
+                                  {getTypeIcon(notification.type)}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between">
+                                    <h4 className="text-sm font-medium text-gray-900 truncate">
+                                      {notification.title}
+                                    </h4>
+                                    <span className="text-xs text-gray-500 ml-2">
+                                      {new Date(notification.timestamp).toLocaleDateString('lt-LT')}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                                    {notification.message}
+                                  </p>
+                                  {!notification.isRead && (
+                                    <div className="flex items-center mt-2">
+                                      <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+                                      <span className="text-xs text-blue-600 font-medium">Nauja</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Home Button */}
+              <button
+                onClick={handleGoToHome}
+                className="flex items-center space-x-2 px-4 py-2 bg-teal-50 text-teal-700 rounded-lg hover:bg-teal-100 transition-colors duration-200"
+              >
+                <Home className="h-4 w-4" />
+                <span>Pagrindinis</span>
+              </button>
+              
               <button
                 onClick={handleLogout}
                 className="flex items-center space-x-2 px-4 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors duration-200"
@@ -622,32 +888,23 @@ const DashboardPage = () => {
               </div>
             </button>
             <button
-              onClick={() => setActiveTab('notifications')}
+              onClick={() => setActiveTab('messages')}
               className={`flex-1 px-6 py-4 text-sm font-medium transition-colors duration-200 ${
-                activeTab === 'notifications'
+                activeTab === 'messages'
                   ? 'text-teal-600 border-b-2 border-teal-600 bg-teal-50'
                   : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
               }`}
             >
               <div className="flex items-center justify-center space-x-2">
-                <Bell className="h-5 w-5" />
-                                 <span>Pranešimai</span>
-                 {unreadCount > 0 && (
-                   <span className={`text-white text-xs rounded-full px-2 py-1 min-w-[20px] ${
-                     hasNewNotifications 
-                       ? 'bg-red-500 animate-pulse' 
-                       : 'bg-red-500'
-                   }`}>
-                     {unreadCount}
-                   </span>
-                 )}
+                <MessageSquare className="h-5 w-5" />
+                <span>Žinutės</span>
               </div>
             </button>
           </div>
 
                      {/* Tab Content */}
            <div className="p-6">
-             {isLoading && galleryItems.length === 0 && travelPackets.length === 0 && notifications.length === 0 ? (
+             {isLoading && galleryItems.length === 0 && travelPackets.length === 0 && notifications.length === 0 && messages.length === 0 ? (
                <div className="flex items-center justify-center py-12">
                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
                </div>
@@ -763,61 +1020,378 @@ const DashboardPage = () => {
                   </div>
                 )}
 
-                {/* Notifications Tab */}
-                {activeTab === 'notifications' && (
+                {/* Messages Tab (Unified Contacts & Reviews) */}
+                {activeTab === 'messages' && (
                   <div>
                     <div className="flex justify-between items-center mb-6">
-                      <h3 className="text-xl font-semibold text-gray-900">Pranešimai</h3>
+                      <h3 className="text-xl font-semibold text-gray-900">Žinutės</h3>
                       <button
-                        onClick={loadNotifications}
+                        onClick={() => { loadContacts(); loadReviews(); }}
                         className="text-teal-600 hover:text-teal-800 text-sm font-medium"
                       >
                         Atnaujinti
                       </button>
                     </div>
 
+                    {/* Filter Controls */}
+                    <div className="bg-gray-50 rounded-lg p-4 mb-6 space-y-4">
+                      {/* Search Bar */}
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                        <input
+                          type="text"
+                          placeholder="Ieškoti pagal vardą, el. paštą, žinutę..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                        />
+                      </div>
+
+                      {/* Filter Dropdowns */}
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Tipas</label>
+                          <select
+                            value={messageFilter}
+                            onChange={(e) => setMessageFilter(e.target.value as any)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                          >
+                            <option value="all">Visi</option>
+                            <option value="contact">Kontaktai</option>
+                            <option value="review">Atsiliepimai</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Skubumas</label>
+                          <select
+                            value={urgencyFilter}
+                            onChange={(e) => setUrgencyFilter(e.target.value as any)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                          >
+                            <option value="all">Visi</option>
+                            <option value="normal">Įprastas</option>
+                            <option value="urgent">Skubus</option>
+                            <option value="emergency">Labai skubus</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Tema</label>
+                          <input
+                            type="text"
+                            placeholder="Filtruoti pagal temą"
+                            value={subjectFilter}
+                            onChange={(e) => setSubjectFilter(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Ryšio būdas</label>
+                          <select
+                            value={contactMethodFilter}
+                            onChange={(e) => setContactMethodFilter(e.target.value as any)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                          >
+                            <option value="all">Visi</option>
+                            <option value="email">El. paštas</option>
+                            <option value="phone">Telefonas</option>
+                            <option value="both">Abu būdai</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Active Filters Display */}
+                      {(searchQuery || messageFilter !== 'all' || urgencyFilter !== 'all' || subjectFilter || contactMethodFilter !== 'all') && (
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm text-gray-600">Aktyvūs filtrai:</span>
+                          {searchQuery && (
+                            <span className="px-2 py-1 bg-teal-100 text-teal-800 text-xs rounded-full">
+                              Paieška: {searchQuery}
+                            </span>
+                          )}
+                          {messageFilter !== 'all' && (
+                            <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                              Tipas: {messageFilter === 'contact' ? 'Kontaktai' : 'Atsiliepimai'}
+                            </span>
+                          )}
+                          {urgencyFilter !== 'all' && (
+                            <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full">
+                              Skubumas: {urgencyFilter}
+                            </span>
+                          )}
+                          {subjectFilter && (
+                            <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
+                              Tema: {subjectFilter}
+                            </span>
+                          )}
+                          {contactMethodFilter !== 'all' && (
+                            <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                              Ryšys: {getContactMethodLabel(contactMethodFilter)}
+                            </span>
+                          )}
+                          <button
+                            onClick={() => {
+                              setSearchQuery('');
+                              setMessageFilter('all');
+                              setUrgencyFilter('all');
+                              setSubjectFilter('');
+                              setContactMethodFilter('all');
+                            }}
+                            className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full hover:bg-gray-200"
+                          >
+                            Išvalyti visus
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
                     <div className="space-y-4">
-                      {notifications.map((notification) => (
-                        <div
-                          key={notification.id}
-                          className={`p-4 rounded-lg border transition-colors duration-200 ${
-                            notification.isRead
-                              ? 'bg-gray-50 border-gray-200'
-                              : 'bg-white border-teal-200 shadow-sm'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-start space-x-3">
-                              <div className={`p-2 rounded-lg ${getPriorityColor(notification.priority)}`}>
-                                {getTypeIcon(notification.type)}
-                              </div>
+                      {getFilteredMessages().length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">
+                          {searchQuery || messageFilter !== 'all' || urgencyFilter !== 'all' || subjectFilter || contactMethodFilter !== 'all' 
+                            ? 'Nerasta žinučių atitinkančių filtro kriterijus'
+                            : 'Žinučių nėra'
+                          }
+                        </div>
+                      ) : (
+                        getFilteredMessages().map((message) => (
+                          <div
+                            key={message.id}
+                            onClick={() => { setSelectedMessage(message); setShowMessageModal(true); }}
+                            className="p-4 rounded-lg border bg-white border-gray-200 hover:shadow-md transition-all duration-200 cursor-pointer"
+                          >
+                            <div className="flex items-start justify-between">
                               <div className="flex-1">
-                                <h4 className="font-semibold text-gray-900 mb-1">{notification.title}</h4>
-                                <p className="text-sm text-gray-600 mb-2">{notification.message}</p>
-                                <p className="text-xs text-gray-500">
-                                  {new Date(notification.timestamp).toLocaleString('lt-LT')}
+                                <div className="flex items-center space-x-3 mb-2">
+                                  <h4 className="font-semibold text-gray-900">{message.name}</h4>
+                                  <span className="text-sm text-gray-500">({message.email})</span>
+                                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                    message.type === 'contact' 
+                                      ? 'bg-blue-100 text-blue-800' 
+                                      : 'bg-purple-100 text-purple-800'
+                                  }`}>
+                                    {message.type === 'contact' ? 'Kontaktas' : 'Atsiliepimas'}
+                                  </span>
+                                  
+                                  {/* Additional badges for contact messages */}
+                                  {message.type === 'contact' && message.urgency && (
+                                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${getUrgencyBadgeColor(message.urgency)}`}>
+                                      {message.urgency === 'emergency' ? 'Labai skubus' : 
+                                       message.urgency === 'urgent' ? 'Skubus' : 'Įprastas'}
+                                    </span>
+                                  )}
+                                  
+                                  {/* Rating for review messages */}
+                                  {message.type === 'review' && message.rating && (
+                                    <div className="flex items-center space-x-1">
+                                      {Array.from({ length: 5 }, (_, i) => (
+                                        <Star
+                                          key={i}
+                                          className={`h-4 w-4 ${
+                                            i < message.rating! ? 'text-yellow-400 fill-current' : 'text-gray-300'
+                                          }`}
+                                        />
+                                      ))}
+                                      <span className="text-sm text-gray-500 ml-1">({message.rating}/5)</span>
+                                    </div>
+                                  )}
+                                </div>
+                                
+                                {/* Subject line for contacts */}
+                                {message.type === 'contact' && message.subject && (
+                                  <p className="text-sm font-medium text-gray-700 mb-1">Tema: {message.subject}</p>
+                                )}
+                                
+                                {/* Message preview */}
+                                <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                                  {message.message.length > 120 
+                                    ? `${message.message.substring(0, 120)}...` 
+                                    : message.message
+                                  }
                                 </p>
+                                
+                                {/* Additional contact info */}
+                                <div className="flex items-center space-x-4 text-xs text-gray-500">
+                                  <span>{new Date(message.created_at).toLocaleString('lt-LT')}</span>
+                                  {message.phone && (
+                                    <span className="flex items-center space-x-1">
+                                      <Phone className="h-3 w-3" />
+                                      <span>{message.phone}</span>
+                                    </span>
+                                  )}
+                                  {message.type === 'contact' && message.preferred_contact && (
+                                    <span className="flex items-center space-x-1">
+                                      <Mail className="h-3 w-3" />
+                                      <span>Pageidauja: {getContactMethodLabel(message.preferred_contact)}</span>
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <Eye className="h-4 w-4 text-teal-600" />
                               </div>
                             </div>
-                            {!notification.isRead && (
-                              <button
-                                onClick={() => markNotificationAsRead(notification.id)}
-                                className="text-teal-600 hover:text-teal-800 text-sm font-medium"
-                              >
-                                Pažymėti kaip perskaitytą
-                              </button>
-                            )}
                           </div>
-                        </div>
-                      ))}
+                        ))
+                      )}
                     </div>
                   </div>
                 )}
+
               </>
             )}
           </div>
         </div>
       </main>
+
+      {/* Message Detail Modal */}
+      {showMessageModal && selectedMessage && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-start mb-6">
+              <h3 className="text-xl font-semibold text-gray-900">
+                {selectedMessage.type === 'contact' ? 'Kontakto detalės' : 'Atsiliepimo detalės'}
+              </h3>
+              <button
+                onClick={() => setShowMessageModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <Eye className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {/* Header Info */}
+              <div className="border-b border-gray-200 pb-4">
+                <div className="flex items-center space-x-3 mb-3">
+                  <div className="w-12 h-12 bg-teal-100 rounded-full flex items-center justify-center">
+                    <User className="h-6 w-6 text-teal-600" />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900">{selectedMessage.name}</h4>
+                    <p className="text-gray-600">{selectedMessage.email}</p>
+                    {selectedMessage.phone && (
+                      <p className="text-gray-600 flex items-center space-x-1">
+                        <Phone size={14} />
+                        <span>{selectedMessage.phone}</span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  {/* Type Badge */}
+                  <span className={`px-3 py-1 text-sm font-medium rounded-full ${
+                    selectedMessage.type === 'contact' 
+                      ? 'bg-blue-100 text-blue-800' 
+                      : 'bg-purple-100 text-purple-800'
+                  }`}>
+                    {selectedMessage.type === 'contact' ? 'Kontaktas' : 'Atsiliepimas'}
+                  </span>
+
+                  {/* Urgency Badge for contacts */}
+                  {selectedMessage.type === 'contact' && selectedMessage.urgency && (
+                    <span className={`px-3 py-1 text-sm font-medium rounded-full ${getUrgencyBadgeColor(selectedMessage.urgency)}`}>
+                      {getUrgencyLabel(selectedMessage.urgency)}
+                    </span>
+                  )}
+
+                  {/* Rating for reviews */}
+                  {selectedMessage.type === 'review' && selectedMessage.rating && (
+                    <div className="flex items-center space-x-1">
+                      {Array.from({ length: 5 }, (_, i) => (
+                        <Star
+                          key={i}
+                          size={20}
+                          className={`${
+                            i < selectedMessage.rating! ? 'text-yellow-400 fill-current' : 'text-gray-300'
+                          }`}
+                        />
+                      ))}
+                      <span className="text-sm text-gray-600 ml-2">({selectedMessage.rating}/5)</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Contact Details */}
+              {selectedMessage.type === 'contact' && (
+                <div>
+                  <h5 className="text-sm font-semibold text-gray-900 mb-3">Kontakto informacija</h5>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {selectedMessage.subject && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Tema</label>
+                        <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">{selectedMessage.subject}</p>
+                      </div>
+                    )}
+                    {selectedMessage.preferred_contact && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Pageidaujamas ryšio būdas</label>
+                        <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">{getContactMethodLabel(selectedMessage.preferred_contact)}</p>
+                      </div>
+                    )}
+                    {selectedMessage.urgency && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Skubumas</label>
+                        <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">{getUrgencyLabel(selectedMessage.urgency)}</p>
+                      </div>
+                    )}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Pateikimo data</label>
+                      <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded">
+                        {new Date(selectedMessage.created_at).toLocaleString('lt-LT')}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Message Content */}
+              <div>
+                <h5 className="text-sm font-semibold text-gray-900 mb-3">
+                  {selectedMessage.type === 'contact' ? 'Žinutė' : 'Atsiliepimas'}
+                </h5>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-gray-900 whitespace-pre-wrap">{selectedMessage.message}</p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                {selectedMessage.type === 'contact' && (
+                  <>
+                    <button
+                      onClick={() => window.location.href = `mailto:${selectedMessage.email}`}
+                      className="flex items-center space-x-2 px-4 py-2 text-teal-600 hover:text-teal-800 border border-teal-600 hover:border-teal-800 rounded-lg transition-colors"
+                    >
+                      <Mail size={16} />
+                      <span>Atsakyti el. paštu</span>
+                    </button>
+                    {selectedMessage.phone && (
+                      <button
+                        onClick={() => window.location.href = `tel:${selectedMessage.phone}`}
+                        className="flex items-center space-x-2 px-4 py-2 text-green-600 hover:text-green-800 border border-green-600 hover:border-green-800 rounded-lg transition-colors"
+                      >
+                        <Phone size={16} />
+                        <span>Skambinti</span>
+                      </button>
+                    )}
+                  </>
+                )}
+                <button
+                  onClick={() => setShowMessageModal(false)}
+                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  Uždaryti
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Gallery Modal */}
       {showGalleryModal && (
@@ -858,12 +1432,12 @@ const DashboardPage = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nuotraukos URL</label>
-                <input
-                  type="url"
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nuotrauka</label>
+                <ImageUpload
                   value={galleryFormData.imageUrl}
-                  onChange={(e) => setGalleryFormData({...galleryFormData, imageUrl: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  onChange={(url) => setGalleryFormData({...galleryFormData, imageUrl: url})}
+                  uploadType="gallery"
+                  placeholder="Įkelkite nuotrauką arba įveskite URL"
                 />
               </div>
               <div>
@@ -985,6 +1559,15 @@ const DashboardPage = () => {
                   value={packetFormData.departure}
                   onChange={(e) => setPacketFormData({...packetFormData, departure: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nuotrauka</label>
+                <ImageUpload
+                  value={packetFormData.imageUrl}
+                  onChange={(url) => setPacketFormData({...packetFormData, imageUrl: url})}
+                  uploadType="travel-packets"
+                  placeholder="Įkelkite kelionės nuotrauką arba įveskite URL"
                 />
               </div>
               <div className="md:col-span-2">

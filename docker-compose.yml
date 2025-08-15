@@ -39,6 +39,9 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD:-mypassword}
       DB_SSL: "false"
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-this-in-production}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-your-64-character-hex-encryption-key-for-sensitive-data-change-this}
+      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-admin123}
     ports:
       - "3001:3001"
     volumes:
