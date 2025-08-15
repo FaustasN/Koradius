@@ -20,26 +20,50 @@ const PORT = process.env.PORT || 3001;
 
 // Environment variables for security
 const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(64).toString('hex');
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || crypto.randomBytes(32);
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY ? 
+  Buffer.from(process.env.ENCRYPTION_KEY, 'hex') : 
+  crypto.randomBytes(32);
+const ENCRYPTION_KEY_STRING = process.env.ENCRYPTION_KEY || crypto.randomBytes(32).toString('hex');
 const ENCRYPTION_IV_LENGTH = 16;
 
 // Encryption utilities for sensitive data
 const encrypt = (text) => {
   const iv = crypto.randomBytes(ENCRYPTION_IV_LENGTH);
-  const cipher = crypto.createCipher('aes-256-cbc', ENCRYPTION_KEY);
+  const cipher = crypto.createCipheriv('aes-256-cbc', ENCRYPTION_KEY, iv);
   let encrypted = cipher.update(text, 'utf8', 'hex');
   encrypted += cipher.final('hex');
   return iv.toString('hex') + ':' + encrypted;
 };
 
 const decrypt = (text) => {
-  const textParts = text.split(':');
-  textParts.shift(); // Remove IV part (not used in createDecipher)
-  const encryptedText = textParts.join(':');
-  const decipher = crypto.createDecipher('aes-256-cbc', ENCRYPTION_KEY);
-  let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
-  decrypted += decipher.final('utf8');
-  return decrypted;
+  try {
+    // Try new method first (proper IV handling)
+    const textParts = text.split(':');
+    const iv = Buffer.from(textParts.shift(), 'hex');
+    const encryptedText = textParts.join(':');
+    const decipher = crypto.createDecipheriv('aes-256-cbc', ENCRYPTION_KEY, iv);
+    let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+  } catch (error) {
+    try {
+      // Fallback to old method for legacy data (uses string key)
+      const textParts = text.split(':');
+      textParts.shift(); // Remove IV part (not used in createDecipher)
+      const encryptedText = textParts.join(':');
+      const decipher = crypto.createDecipher('aes-256-cbc', ENCRYPTION_KEY_STRING);
+      let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
+      decrypted += decipher.final('utf8');
+      return decrypted;
+    } catch (fallbackError) {
+      console.error('Decryption failed with both methods:', {
+        newMethod: error.message,
+        oldMethod: fallbackError.message,
+        textPreview: text.substring(0, 50) + '...'
+      });
+      throw new Error('Failed to decrypt data');
+    }
+  }
 };
 
 // JWT middleware for authentication
