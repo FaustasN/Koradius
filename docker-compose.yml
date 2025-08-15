@@ -42,6 +42,9 @@ services:
       JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-this-in-production}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-your-64-character-hex-encryption-key-for-sensitive-data-change-this}
       DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-admin123}
+      # NodeMailer Configuration
+      EMAIL_USER: ${EMAIL_USER:-systemsairbag@gmail.com}
+      EMAIL_PASS: ${EMAIL_PASS:-snbh yglc chip bzqg}
     ports:
       - "3001:3001"
     volumes:

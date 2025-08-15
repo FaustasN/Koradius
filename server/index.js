@@ -8,6 +8,16 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
+const nodemailer = require('nodemailer');
+
+// Email transporter configuration
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
 
 // Try to load .env file if it exists, but don't fail if it doesn't
 try {
@@ -130,6 +140,27 @@ app.use(cors());
 app.use(express.json());
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Email endpoint
+app.post('/api/send-email', async (req, res) => {
+  try {
+    const { to, subject, text, html } = req.body;
+    
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to,
+      subject,
+      text,
+      html
+    };
+    
+    await transporter.sendMail(mailOptions);
+    res.json({ success: true, message: 'Laiškas išsiųstas!' });
+  } catch (error) {
+    console.error('Email sending error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 // Rate limiting for login attempts
 const loginLimiter = rateLimit({
