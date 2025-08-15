@@ -117,6 +117,15 @@ export const contactsAPI = {
     return response.json();
   },
 
+  unresolve: async (id: number) => {
+    const response = await fetch(`${API_BASE_URL}/admin/contacts/${id}/unresolve`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to unresolve contact');
+    return response.json();
+  },
+
   submit: async (contactData: {
     name: string;
     email: string;
