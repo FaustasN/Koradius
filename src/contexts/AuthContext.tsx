@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
 import { authAPI } from '../services/adminApiService';
 
 interface AuthContextType {
@@ -22,33 +22,17 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-// JWT token utilities
-const JWT_SECRET = import.meta.env.VITE_JWT_SECRET || 'default-secret-change-me';
-
-const generateJWT = (payload: any): string => {
-  const header = { alg: 'HS256', typ: 'JWT' };
-  const encodedHeader = btoa(JSON.stringify(header));
-  const encodedPayload = btoa(JSON.stringify(payload));
-  const signature = btoa(JWT_SECRET); // Use environment variable or fallback
-  
-  return `${encodedHeader}.${encodedPayload}.${signature}`;
-};
-
-const verifyJWT = (token: string): any | null => {
+// Token validation utilities - Only for basic format checking
+const isValidTokenFormat = (token: string): boolean => {
   try {
     const parts = token.split('.');
-    if (parts.length !== 3) return null;
+    if (parts.length !== 3) return false;
     
+    // Just check if it can be decoded (format validation only)
     const payload = JSON.parse(atob(parts[1]));
-    const currentTime = Math.floor(Date.now() / 1000);
-    
-    if (payload.exp && payload.exp < currentTime) {
-      return null; // Token expired
-    }
-    
-    return payload;
-  } catch (error) {
-    return null;
+    return payload && typeof payload === 'object';
+  } catch {
+    return false;
   }
 };
 
@@ -62,10 +46,10 @@ const setCookie = (name: string, value: string, days: number) => {
 const getCookie = (name: string): string | null => {
   const nameEQ = name + "=";
   const ca = document.cookie.split(';');
-  for (let i = 0; i < ca.length; i++) {
-    let c = ca[i];
-    while (c.charAt(0) === ' ') c = c.substring(1, c.length);
-    if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+  for (const cookie of ca) {
+    let c = cookie;
+    while (c.startsWith(' ')) c = c.substring(1, c.length);
+    if (c.startsWith(nameEQ)) return c.substring(nameEQ.length, c.length);
   }
   return null;
 };
@@ -78,16 +62,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check if user is already logged in on component mount
+  // Check authentication status by validating with the server
   useEffect(() => {
-    const checkAuth = () => {
+    const checkAuth = async () => {
       const token = getCookie('adminToken');
-      if (token) {
-        const payload = verifyJWT(token);
-        if (payload) {
+      if (token && isValidTokenFormat(token)) {
+        try {
+          // Validate token with server
+          await authAPI.validate();
           setIsAuthenticated(true);
-        } else {
-          // Token is invalid or expired, remove it
+        } catch (error) {
+          console.error('Token validation failed:', error);
           deleteCookie('adminToken');
           setIsAuthenticated(false);
         }
@@ -100,7 +85,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkAuth();
   }, []);
 
-  const login = async (username: string, password: string): Promise<boolean> => {
+  const login = useCallback(async (username: string, password: string): Promise<boolean> => {
     try {
       const data = await authAPI.login(username, password);
       const token = data.token;
@@ -113,19 +98,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('Login error:', error);
       return false;
     }
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     deleteCookie('adminToken');
     setIsAuthenticated(false);
-  };
+  }, []);
 
-  const value = {
+  const value = useMemo(() => ({
     isAuthenticated,
     isLoading,
     login,
     logout,
-  };
+  }), [isAuthenticated, isLoading, login, logout]);
 
   return (
     <AuthContext.Provider value={value}>

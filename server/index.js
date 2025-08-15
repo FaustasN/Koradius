@@ -7,6 +7,7 @@ const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
 
 // Try to load .env file if it exists, but don't fail if it doesn't
 try {
@@ -129,6 +130,18 @@ app.use(cors());
 app.use(express.json());
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Rate limiting for login attempts
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 requests per windowMs
+  message: {
+    error: 'Too many login attempts, please try again later.',
+    retryAfter: 15 * 60 // 15 minutes in seconds
+  },
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
 
 // Database configuration
 const pool = new Pool({
@@ -306,7 +319,7 @@ pool.query('SELECT NOW()', async (err, res) => {
 });
 
 // Authentication endpoints
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', loginLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
 
@@ -402,6 +415,36 @@ app.post('/api/auth/change-password', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error changing password:', error);
     res.status(500).json({ error: 'Failed to change password' });
+  }
+});
+
+// Token validation endpoint
+app.get('/api/auth/validate', authenticateToken, async (req, res) => {
+  try {
+    // If we reach here, the token is valid (authenticateToken middleware passed)
+    // Double-check that the user still exists and is active
+    const result = await pool.query(
+      'SELECT id, username, email, role, is_active FROM admins WHERE id = $1 AND is_active = true',
+      [req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: 'User no longer exists or is inactive' });
+    }
+
+    const admin = result.rows[0];
+    res.json({
+      valid: true,
+      admin: {
+        id: admin.id,
+        username: admin.username,
+        email: admin.email,
+        role: admin.role
+      }
+    });
+  } catch (error) {
+    console.error('Error validating token:', error);
+    res.status(500).json({ error: 'Token validation failed' });
   }
 });
 
