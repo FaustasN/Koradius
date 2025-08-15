@@ -118,6 +118,19 @@ const DashboardPage = () => {
   const [reviewSearchQuery, setReviewSearchQuery] = useState('');
   const [ratingFilter, setRatingFilter] = useState<'all' | '1' | '2' | '3' | '4' | '5'>('all');
   const [approvalFilter, setApprovalFilter] = useState<'all' | 'approved' | 'pending'>('all');
+  
+  // Review management state
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [reviewToApprove, setReviewToApprove] = useState<Review | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [reviewToEdit, setReviewToEdit] = useState<Review | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    email: '',
+    rating: 5,
+    comment: '',
+    trip_reference: ''
+  });
 
   // Gallery state
   const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
@@ -896,12 +909,58 @@ const DashboardPage = () => {
   };
 
   // Review handlers
-  const handleApproveReview = async (id: number) => {
+  const openApprovalModal = (review: Review) => {
+    setReviewToApprove(review);
+    setShowApprovalModal(true);
+  };
+
+  const handleApproveReview = async () => {
+    if (!reviewToApprove) return;
+    
     try {
-      await reviewsAPI.approve(id);
+      await reviewsAPI.approve(reviewToApprove.id);
       loadReviews(); // Reload reviews to reflect the changes
+      setShowApprovalModal(false);
+      setReviewToApprove(null);
     } catch (error) {
       console.error('Error approving review:', error);
+    }
+  };
+
+  const handleUnapproveReview = async (id: number) => {
+    if (window.confirm('Ar tikrai norite panaikinti šio atsiliepimo patvirtinimą? Jis neberodysis viešoje svetainėje.')) {
+      try {
+        await reviewsAPI.unapprove(id);
+        loadReviews(); // Reload reviews to reflect the changes
+      } catch (error) {
+        console.error('Error unapproving review:', error);
+      }
+    }
+  };
+
+  const openEditModal = (review: Review) => {
+    setReviewToEdit(review);
+    setEditForm({
+      name: review.name,
+      email: review.email,
+      rating: review.rating,
+      comment: review.comment,
+      trip_reference: review.trip_reference || ''
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdateReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reviewToEdit) return;
+
+    try {
+      await reviewsAPI.update(reviewToEdit.id, editForm);
+      loadReviews(); // Reload reviews to reflect the changes
+      setShowEditModal(false);
+      setReviewToEdit(null);
+    } catch (error) {
+      console.error('Error updating review:', error);
     }
   };
 
@@ -1709,13 +1768,14 @@ const DashboardPage = () => {
                         getFilteredReviews().map((review) => (
                           <div
                             key={review.id}
-                            className={`p-4 rounded-lg border bg-white border-gray-200 hover:shadow-md transition-all duration-200 ${highlightedItemId === `review-${review.id}` ? 'ring-2 ring-teal-500 bg-teal-50 animate-pulse' : ''}`}
+                            className={`p-4 rounded-lg border bg-white border-gray-200 hover:shadow-md transition-all duration-200 overflow-hidden ${highlightedItemId === `review-${review.id}` ? 'ring-2 ring-teal-500 bg-teal-50 animate-pulse' : ''}`}
                           >
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center space-x-3 mb-2">
-                                  <h4 className="font-semibold text-gray-900">{review.name}</h4>
-                                  <span className="text-sm text-gray-500">({review.email})</span>
+                            <div className="flex flex-col space-y-3 min-w-0">
+                              {/* Header with name, email, rating and status */}
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3 flex-wrap min-w-0 flex-1">
+                                  <h4 className="font-semibold text-gray-900 break-words">{review.name}</h4>
+                                  <span className="text-sm text-gray-500 break-all">({review.email})</span>
                                   <div className="flex items-center space-x-1">
                                     {Array.from({ length: 5 }, (_, i) => (
                                       <Star
@@ -1738,35 +1798,56 @@ const DashboardPage = () => {
                                   )}
                                 </div>
                                 
-                                {review.trip_reference && (
-                                  <p className="text-sm font-medium text-gray-700 mb-1">Kelionė: {review.trip_reference}</p>
-                                )}
-                                
-                                <p className="text-sm text-gray-600 mb-2">
-                                  {review.comment}
-                                </p>
-                                
-                                <div className="flex items-center space-x-4 text-xs text-gray-500">
-                                  <span>{new Date(review.created_at).toLocaleString('lt-LT')}</span>
+                                {/* Action buttons - always visible */}
+                                <div className="flex items-center space-x-2 flex-shrink-0">
+                                  {!review.is_approved && (
+                                    <button
+                                      onClick={() => openApprovalModal(review)}
+                                      className="text-green-600 hover:text-green-800 p-2 rounded-lg hover:bg-green-50"
+                                      title="Patvirtinti atsiliepimą"
+                                    >
+                                      <CheckCircle className="h-4 w-4" />
+                                    </button>
+                                  )}
+                                  {review.is_approved && (
+                                    <button
+                                      onClick={() => handleUnapproveReview(review.id)}
+                                      className="text-orange-600 hover:text-orange-800 p-2 rounded-lg hover:bg-orange-50"
+                                      title="Panaikinti patvirtinimą"
+                                    >
+                                      <EyeOff className="h-4 w-4" />
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => openEditModal(review)}
+                                    className="text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50"
+                                    title="Redaguoti atsiliepimą"
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteReview(review.id)}
+                                    className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50"
+                                    title="Ištrinti atsiliepimą"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
                                 </div>
                               </div>
-                              <div className="flex items-center space-x-2">
-                                {!review.is_approved && (
-                                  <button
-                                    onClick={() => handleApproveReview(review.id)}
-                                    className="text-green-600 hover:text-green-800 p-2 rounded-lg hover:bg-green-50"
-                                    title="Patvirtinti atsiliepimą"
-                                  >
-                                    <CheckCircle className="h-4 w-4" />
-                                  </button>
-                                )}
-                                <button
-                                  onClick={() => handleDeleteReview(review.id)}
-                                  className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50"
-                                  title="Ištrinti atsiliepimą"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
+                              
+                              {/* Trip reference */}
+                              {review.trip_reference && (
+                                <p className="text-sm font-medium text-gray-700 break-words">Kelionė: {review.trip_reference}</p>
+                              )}
+                              
+                              {/* Comment */}
+                              <p className="text-sm text-gray-600 break-words overflow-wrap-anywhere">
+                                {review.comment}
+                              </p>
+                              
+                              {/* Timestamp */}
+                              <div className="text-xs text-gray-500">
+                                <span>{new Date(review.created_at).toLocaleString('lt-LT')}</span>
                               </div>
                             </div>
                           </div>
@@ -2000,6 +2081,150 @@ const DashboardPage = () => {
                 Išsaugoti
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Review Approval Confirmation Modal */}
+      {showApprovalModal && reviewToApprove && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Patvirtinti atsiliepimą
+            </h3>
+            <div className="space-y-4 mb-6">
+              <div>
+                <p className="text-sm text-gray-600 mb-2">Klientas:</p>
+                <p className="font-medium">{reviewToApprove.name}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 mb-2">Įvertinimas:</p>
+                <div className="flex items-center space-x-1">
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <Star
+                      key={i}
+                      className={`h-4 w-4 ${
+                        i < reviewToApprove.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
+                      }`}
+                    />
+                  ))}
+                  <span className="text-sm text-gray-500 ml-1">({reviewToApprove.rating}/5)</span>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 mb-2">Atsiliepimas:</p>
+                <p className="text-sm text-gray-800 bg-gray-50 p-3 rounded-lg">
+                  {reviewToApprove.comment}
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowApprovalModal(false);
+                  setReviewToApprove(null);
+                }}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              >
+                Atšaukti
+              </button>
+              <button
+                onClick={handleApproveReview}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+                Patvirtinti
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Review Edit Modal */}
+      {showEditModal && reviewToEdit && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Redaguoti atsiliepimą
+            </h3>
+            <form onSubmit={handleUpdateReview} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Vardas</label>
+                  <input
+                    type="text"
+                    value={editForm.name}
+                    onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">El. paštas</label>
+                  <input
+                    type="email"
+                    value={editForm.email}
+                    onChange={(e) => setEditForm({...editForm, email: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Įvertinimas</label>
+                  <select
+                    value={editForm.rating}
+                    onChange={(e) => setEditForm({...editForm, rating: parseInt(e.target.value)})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    required
+                  >
+                    <option value={1}>1 žvaigždutė</option>
+                    <option value={2}>2 žvaigždutės</option>
+                    <option value={3}>3 žvaigždutės</option>
+                    <option value={4}>4 žvaigždutės</option>
+                    <option value={5}>5 žvaigždutės</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Kelionės numeris</label>
+                  <input
+                    type="text"
+                    value={editForm.trip_reference}
+                    onChange={(e) => setEditForm({...editForm, trip_reference: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    placeholder="Pvz.: KT2024-001"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Atsiliepimas</label>
+                <textarea
+                  value={editForm.comment}
+                  onChange={(e) => setEditForm({...editForm, comment: e.target.value})}
+                  rows={6}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  required
+                />
+              </div>
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setReviewToEdit(null);
+                  }}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                >
+                  Atšaukti
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Išsaugoti
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

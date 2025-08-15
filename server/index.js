@@ -832,6 +832,46 @@ app.put('/api/admin/reviews/:id/approve', authenticateToken, async (req, res) =>
   }
 });
 
+app.put('/api/admin/reviews/:id/unapprove', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await pool.query(
+      'UPDATE user_reviews SET is_approved = false, is_featured = false, approved_by = NULL, approved_at = NULL WHERE id = $1',
+      [id]
+    );
+
+    res.json({ message: 'Review unapproved successfully' });
+  } catch (error) {
+    console.error('Error unapproving review:', error);
+    res.status(500).json({ error: 'Failed to unapprove review' });
+  }
+});
+
+app.put('/api/admin/reviews/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, email, rating, comment, trip_reference } = req.body;
+
+    // Encrypt sensitive data
+    const nameEncrypted = encrypt(name);
+    const emailEncrypted = encrypt(email);
+    const commentEncrypted = encrypt(comment);
+
+    await pool.query(
+      `UPDATE user_reviews 
+       SET name_encrypted = $1, email_encrypted = $2, rating = $3, comment_encrypted = $4, trip_reference = $5
+       WHERE id = $6`,
+      [nameEncrypted, emailEncrypted, rating, commentEncrypted, trip_reference, id]
+    );
+
+    res.json({ message: 'Review updated successfully' });
+  } catch (error) {
+    console.error('Error updating review:', error);
+    res.status(500).json({ error: 'Failed to update review' });
+  }
+});
+
 app.delete('/api/admin/reviews/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;

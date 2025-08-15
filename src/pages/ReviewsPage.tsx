@@ -1,10 +1,19 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Star, ChevronLeft, ChevronRight, Quote, Filter, Calendar, MapPin, ThumbsUp, ChevronDown, X, Send } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Star, ChevronLeft, ChevronRight, Quote, Calendar, X, Send, ThumbsUp } from 'lucide-react';
 import { reviewsAPI } from '../services/adminApiService';
 
+interface Review {
+  id: number;
+  name: string;
+  email: string;
+  rating: number;
+  comment: string;
+  trip_reference?: string;
+  is_approved: boolean;
+  created_at: string;
+}
+
 const ReviewsPage = () => {
-  const navigate = useNavigate();
 
   const handleWriteReview = () => {
     setShowReviewForm(true);
@@ -12,7 +21,6 @@ const ReviewsPage = () => {
 
   const [currentReview, setCurrentReview] = useState(0);
   const [filterRating, setFilterRating] = useState('all');
-  const [filterCategory, setFilterCategory] = useState('all');
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [reviewForm, setReviewForm] = useState({
     name: '',
@@ -23,129 +31,24 @@ const ReviewsPage = () => {
     tripReference: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const reviews = [
-    {
-      id: 1,
-      name: "Ona Petraitienė",
-      age: 68,
-      location: "Vilnius",
-      rating: 5,
-      text: "Nuostabi kelionė į Santorini! Viskas buvo kruopščiai suplanuota, gidas labai malonus ir daug papasakojo. Ypač patiko, kad viskas buvo pritaikyta mūsų amžiui - ne per daug vaikščiojimo, patogūs transferai. Tikrai rekomenduoju visiems, kurie nori kokybiškai pailsėti!",
-      trip: "Romantiškas savaitgalis Graikijoje",
-      image: "https://images.pexels.com/photos/1181686/pexels-photo-1181686.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop",
-      date: "2024-10-15",
-      category: "weekend",
-      helpful: 24,
-      verified: true
-    },
-    {
-      id: 2,
-      name: "Antanas Kazlauskas",
-      age: 72,
-      location: "Kaunas",
-      rating: 5,
-      text: "Su žmona nuvykome į Tenerifę. Viešbutis puikus, maistas skanus, oras nuostabus. Koradius Travel komanda pasirūpino visais smulkmenomis - nuo skrydžių iki ekskursijų. Jau planuojame kitą kelionę su jais! Ypač džiugu, kad viskas buvo organizuota taip, kad mums, vyresnio amžiaus žmonėms, būtų patogu.",
-      trip: "Saulėtas poilsis Tenerifėje",
-      image: "https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop",
-      date: "2024-09-22",
-      category: "vacation",
-      helpful: 31,
-      verified: true
-    },
-    {
-      id: 3,
-      name: "Rasa Jonaitienė",
-      age: 45,
-      location: "Klaipėda",
-      rating: 5,
-      text: "Medicininė kelionė į Stambulą praėjo be jokių problemų. Personalas labai profesionalus, viskas išversta į lietuvių kalbą. Rezultatu labai patenkinta, o kelionė buvo kaip atostogos. Ačiū už puikų aptarnavimą! Rekomenduoju visiems, kurie svarsto medicininį turizmą.",
-      trip: "Plaukų transplantacija Stambule",
-      image: "https://images.pexels.com/photos/1181424/pexels-photo-1181424.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop",
-      date: "2024-08-14",
-      category: "medical",
-      helpful: 18,
-      verified: true
-    },
-    {
-      id: 4,
-      name: "Vytautas Petraitis",
-      age: 65,
-      location: "Šiauliai",
-      rating: 5,
-      text: "Kelionė į Romą buvo tikras sapnas! Gidas Mindaugas puikiai pažįsta miestą ir labai įdomiai pasakoja. Maršrutas buvo idealiai suplanuotas - spėjome pamatyti viską, ko norėjome, bet neskubėjome. Viešbutis centre, viskas pasiekiama pėsčiomis. Puiki organizacija!",
-      trip: "Magiškas Romos savaitgalis",
-      image: "https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop",
-      date: "2024-07-28",
-      category: "weekend",
-      helpful: 27,
-      verified: true
-    },
-    {
-      id: 5,
-      name: "Nijolė Kazlauskienė",
-      age: 58,
-      location: "Panevėžys",
-      rating: 5,
-      text: "Bali - tai tikras rojus! Niekada nemaniau, kad galiu taip atsipalaiduoti. Viešbutis prie jūros, spa procedūros, egzotiški vaisiai... Koradius Travel tikrai žino, kaip sukurti nepamirštamas atostogas! Ypač patiko, kad buvo organizuotos ir kultūrinės ekskursijos.",
-      trip: "Egzotiškas Bali nuotykis",
-      image: "https://images.pexels.com/photos/1181519/pexels-photo-1181519.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop",
-      date: "2024-06-12",
-      category: "vacation",
-      helpful: 35,
-      verified: true
-    },
-    {
-      id: 6,
-      name: "Darius Mockus",
-      age: 52,
-      location: "Alytus",
-      rating: 4,
-      text: "Dantų gydymas Budapešte praėjo sklandžiai. Klinika moderni, gydytojai profesionalūs. Vienintelis minus - viešbutis buvo šiek tiek toliau nuo centro, nei tikėjausi. Bet bendrai patirtis teigiama, sutaupiau nemažai pinigų palyginti su Lietuva.",
-      trip: "Dantų gydymas Budapešte",
-      image: "https://images.pexels.com/photos/1040880/pexels-photo-1040880.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop",
-      date: "2024-05-19",
-      category: "medical",
-      helpful: 12,
-      verified: true
-    },
-    {
-      id: 7,
-      name: "Gintarė Petrulienė",
-      age: 41,
-      location: "Marijampolė",
-      rating: 5,
-      text: "Islandijos kelionė buvo neįtikėtina! Šiaurės pašvaistė, geizerai, ledynai - viskas kaip sapne. Gidas labai gerai mokėjo lietuviškai ir daug papasakojo apie šalies istoriją. Organizacija puiki, rekomenduoju visiems, kurie myli gamtą!",
-      trip: "Šiaurės pašvaistė Islandijoje",
-      image: "https://images.pexels.com/photos/1181690/pexels-photo-1181690.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop",
-      date: "2024-04-07",
-      category: "nature",
-      helpful: 29,
-      verified: true
-    },
-    {
-      id: 8,
-      name: "Algirdas Jonaitis",
-      age: 69,
-      location: "Utena",
-      rating: 5,
-      text: "Paryžiaus kelionė su žmona buvo nuostabi! Eifelio bokštas, Luvras, Šan Elizė - viskas, apie ką svajojome. Ypač patiko, kad buvo organizuotas lietuviškas gidas, kuris papasakojo daug įdomių istorijų. Maistas restoranuose puikus!",
-      trip: "Romantiškas savaitgalis Paryžiuje",
-      image: "https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop",
-      date: "2024-03-25",
-      category: "weekend",
-      helpful: 22,
-      verified: true
+  useEffect(() => {
+    loadApprovedReviews();
+  }, []);
+
+  const loadApprovedReviews = async () => {
+    try {
+      setLoading(true);
+      const data = await reviewsAPI.getApproved();
+      setReviews(data);
+    } catch (error) {
+      console.error('Error loading approved reviews:', error);
+    } finally {
+      setLoading(false);
     }
-  ];
-
-  const categories = [
-    { id: 'all', label: 'Visi atsiliepimai' },
-    { id: 'weekend', label: 'Savaitgalio kelionės' },
-    { id: 'vacation', label: 'Poilsinės kelionės' },
-    { id: 'medical', label: 'Medicininis turizmas' },
-    { id: 'nature', label: 'Gamtos kelionės' }
-  ];
+  };
 
   const ratings = [
     { id: 'all', label: 'Visi įvertinimai' },
@@ -154,8 +57,8 @@ const ReviewsPage = () => {
     { id: '3', label: '3 žvaigždutės' }
   ];
 
+  // Filter reviews based on rating only since we don't have category in the API response
   const filteredReviews = reviews
-    .filter(review => filterCategory === 'all' || review.category === filterCategory)
     .filter(review => filterRating === 'all' || review.rating.toString() === filterRating);
 
   const nextReview = () => {
@@ -252,8 +155,19 @@ const ReviewsPage = () => {
     });
   };
 
-  const averageRating = reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length;
+  const averageRating = reviews.length > 0 ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length : 0;
   const totalReviews = reviews.length;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 pt-24 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Kraunami atsiliepimai...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 pt-24">
@@ -461,26 +375,7 @@ const ReviewsPage = () => {
 
         {/* Filters */}
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">Kelionės tipas</label>
-              <div className="flex flex-wrap gap-2">
-                {categories.map((category) => (
-                  <button
-                    key={category.id}
-                    onClick={() => setFilterCategory(category.id)}
-                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${
-                      filterCategory === category.id
-                        ? 'bg-gradient-to-r from-teal-500 to-teal-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-teal-50 hover:text-teal-600'
-                    }`}
-                  >
-                    {category.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            
+          <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-3">Įvertinimas</label>
               <div className="flex flex-wrap gap-2">
@@ -503,89 +398,95 @@ const ReviewsPage = () => {
         </div>
 
         {/* Featured Review Carousel */}
-        <div className="mb-16">
-          <h2 className="text-3xl font-bold text-gray-800 text-center mb-8">Išskirtiniai atsiliepimai</h2>
-          
-          <div className="relative max-w-4xl mx-auto">
-            <div className="bg-white rounded-3xl shadow-2xl p-8 md:p-12 relative overflow-hidden">
-              {/* Background Pattern */}
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-teal-100 to-teal-200 rounded-full -translate-y-16 translate-x-16 opacity-50"></div>
-              <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-yellow-100 to-yellow-200 rounded-full translate-y-12 -translate-x-12 opacity-50"></div>
+        {filteredReviews.length > 0 && (
+          <div className="mb-16">
+            <h2 className="text-3xl font-bold text-gray-800 text-center mb-8">Išskirtiniai atsiliepimai</h2>
+            
+            <div className="relative max-w-4xl mx-auto">
+              <div className="bg-white rounded-3xl shadow-2xl p-8 md:p-12 relative overflow-hidden">
+                {/* Background Pattern */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-teal-100 to-teal-200 rounded-full -translate-y-16 translate-x-16 opacity-50"></div>
+                <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-yellow-100 to-yellow-200 rounded-full translate-y-12 -translate-x-12 opacity-50"></div>
 
-              <div className="relative z-10">
-                {/* Quote Icon */}
-                <div className="flex justify-center mb-6">
-                  <div className="bg-gradient-to-r from-teal-500 to-teal-600 p-4 rounded-full">
-                    <Quote className="text-white" size={32} />
+                <div className="relative z-10">
+                  {/* Quote Icon */}
+                  <div className="flex justify-center mb-6">
+                    <div className="bg-gradient-to-r from-teal-500 to-teal-600 p-4 rounded-full">
+                      <Quote className="text-white" size={32} />
+                    </div>
                   </div>
-                </div>
 
-                {/* Review Text */}
-                <blockquote className="text-lg md:text-xl text-gray-700 leading-relaxed text-center mb-8 italic">
-                  "{filteredReviews[currentReview]?.text}"
-                </blockquote>
+                  {/* Review Text */}
+                  <blockquote className="text-lg md:text-xl text-gray-700 leading-relaxed text-center mb-8 italic">
+                    "{filteredReviews[currentReview]?.comment}"
+                  </blockquote>
 
-                {/* Rating */}
-                <div className="flex justify-center mb-6">
-                  <div className="flex space-x-1">
-                    {renderStars(filteredReviews[currentReview]?.rating || 5)}
+                  {/* Rating */}
+                  <div className="flex justify-center mb-6">
+                    <div className="flex space-x-1">
+                      {renderStars(filteredReviews[currentReview]?.rating || 5)}
+                    </div>
                   </div>
-                </div>
 
-                {/* Client Info */}
-                <div className="flex items-center justify-center space-x-4">
-                  <img
-                    src={filteredReviews[currentReview]?.image}
-                    alt={filteredReviews[currentReview]?.name}
-                    className="w-16 h-16 rounded-full object-cover border-4 border-teal-100"
-                  />
-                  <div className="text-center">
-                    <h4 className="font-bold text-gray-800 text-lg">
-                      {filteredReviews[currentReview]?.name}, {filteredReviews[currentReview]?.age} m.
-                    </h4>
-                    <p className="text-gray-600">{filteredReviews[currentReview]?.location}</p>
-                    <p className="text-sm text-teal-600 font-semibold mt-1">
-                      {filteredReviews[currentReview]?.trip}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {filteredReviews[currentReview]?.date}
-                    </p>
+                  {/* Client Info */}
+                  <div className="flex items-center justify-center space-x-4">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-teal-100 to-teal-200 flex items-center justify-center text-teal-600 font-bold text-xl">
+                      {filteredReviews[currentReview]?.name?.charAt(0)}
+                    </div>
+                    <div className="text-center">
+                      <h4 className="font-bold text-gray-800 text-lg">
+                        {filteredReviews[currentReview]?.name}
+                      </h4>
+                      <p className="text-gray-600">{filteredReviews[currentReview]?.email}</p>
+                      {filteredReviews[currentReview]?.trip_reference && (
+                        <p className="text-sm text-teal-600 font-semibold mt-1">
+                          {filteredReviews[currentReview]?.trip_reference}
+                        </p>
+                      )}
+                      <p className="text-xs text-gray-500 mt-1">
+                        {new Date(filteredReviews[currentReview]?.created_at || '').toLocaleDateString('lt-LT')}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Navigation Arrows */}
-            <button
-              onClick={prevReview}
-              className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white hover:bg-teal-50 text-teal-600 p-3 rounded-full shadow-lg transition-all duration-300 transform hover:scale-110 z-20"
-            >
-              <ChevronLeft size={24} />
-            </button>
-            
-            <button
-              onClick={nextReview}
-              className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white hover:bg-teal-50 text-teal-600 p-3 rounded-full shadow-lg transition-all duration-300 transform hover:scale-110 z-20"
-            >
-              <ChevronRight size={24} />
-            </button>
+              {/* Navigation Arrows */}
+              {filteredReviews.length > 1 && (
+                <>
+                  <button
+                    onClick={prevReview}
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white hover:bg-teal-50 text-teal-600 p-3 rounded-full shadow-lg transition-all duration-300 transform hover:scale-110 z-20"
+                  >
+                    <ChevronLeft size={24} />
+                  </button>
+                  
+                  <button
+                    onClick={nextReview}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white hover:bg-teal-50 text-teal-600 p-3 rounded-full shadow-lg transition-all duration-300 transform hover:scale-110 z-20"
+                  >
+                    <ChevronRight size={24} />
+                  </button>
 
-            {/* Dots Indicator */}
-            <div className="flex justify-center space-x-2 mt-8">
-              {filteredReviews.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentReview(index)}
-                  className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                    index === currentReview
-                      ? 'bg-teal-500 w-8'
-                      : 'bg-gray-300 hover:bg-gray-400'
-                  }`}
-                />
-              ))}
+                  {/* Dots Indicator */}
+                  <div className="flex justify-center space-x-2 mt-8">
+                    {filteredReviews.map((_, index) => (
+                      <button
+                        key={`dot-${index}`}
+                        onClick={() => setCurrentReview(index)}
+                        className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                          index === currentReview
+                            ? 'bg-teal-500 w-8'
+                            : 'bg-gray-300 hover:bg-gray-400'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           </div>
-        </div>
+        )}
 
         {/* All Reviews Grid */}
         <div className="mb-16">
@@ -593,67 +494,71 @@ const ReviewsPage = () => {
             Visi atsiliepimai ({filteredReviews.length})
           </h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredReviews.map((review) => (
-              <div
-                key={review.id}
-                className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1"
-              >
-                {/* Header */}
-                <div className="flex items-center space-x-4 mb-4">
-                  <img
-                    src={review.image}
-                    alt={review.name}
-                    className="w-12 h-12 rounded-full object-cover"
-                  />
-                  <div className="flex-1">
-                    <h4 className="font-bold text-gray-800">{review.name}, {review.age} m.</h4>
-                    <div className="flex items-center space-x-2 text-sm text-gray-600">
-                      <MapPin size={14} />
-                      <span>{review.location}</span>
+          {filteredReviews.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Quote className="text-gray-400" size={32} />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-600 mb-2">Atsiliepimų nėra</h3>
+              <p className="text-gray-500">
+                {filterRating !== 'all' 
+                  ? 'Nėra atsiliepimų atitinkančių pasirinktą reitingą' 
+                  : 'Kol kas nėra patvirtintų atsiliepimų'}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredReviews.map((review) => (
+                <div
+                  key={review.id}
+                  className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1"
+                >
+                  {/* Header */}
+                  <div className="flex items-center space-x-4 mb-4">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-100 to-teal-200 flex items-center justify-center text-teal-600 font-bold">
+                      {review.name.charAt(0)}
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-gray-800">{review.name}</h4>
+                      <div className="text-sm text-gray-600">
+                        {review.email}
+                      </div>
                     </div>
                   </div>
-                  {review.verified && (
-                    <div className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-semibold">
-                      Patvirtinta
+
+                  {/* Rating */}
+                  <div className="flex items-center space-x-2 mb-3">
+                    <div className="flex space-x-1">
+                      {renderStars(review.rating)}
+                    </div>
+                    <span className="text-sm text-gray-600">
+                      {review.rating}/5
+                    </span>
+                  </div>
+
+                  {/* Trip Info */}
+                  {review.trip_reference && (
+                    <div className="bg-teal-50 text-teal-700 px-3 py-1 rounded-full text-sm font-medium mb-4 inline-block">
+                      {review.trip_reference}
                     </div>
                   )}
-                </div>
 
-                {/* Rating */}
-                <div className="flex items-center space-x-2 mb-3">
-                  <div className="flex space-x-1">
-                    {renderStars(review.rating)}
+                  {/* Review Text */}
+                  <p className="text-gray-700 leading-relaxed mb-4 line-clamp-4">
+                    {review.comment}
+                  </p>
+
+                  {/* Footer */}
+                  <div className="flex items-center justify-between text-sm text-gray-500 pt-4 border-t border-gray-100">
+                    <div className="flex items-center space-x-1">
+                      <Calendar size={14} />
+                      <span>{new Date(review.created_at).toLocaleDateString('lt-LT')}</span>
+                    </div>
                   </div>
-                  <span className="text-sm text-gray-600">
-                    {review.rating}/5
-                  </span>
                 </div>
-
-                {/* Trip Info */}
-                <div className="bg-teal-50 text-teal-700 px-3 py-1 rounded-full text-sm font-medium mb-4 inline-block">
-                  {review.trip}
-                </div>
-
-                {/* Review Text */}
-                <p className="text-gray-700 leading-relaxed mb-4 line-clamp-4">
-                  {review.text}
-                </p>
-
-                {/* Footer */}
-                <div className="flex items-center justify-between text-sm text-gray-500 pt-4 border-t border-gray-100">
-                  <div className="flex items-center space-x-1">
-                    <Calendar size={14} />
-                    <span>{review.date}</span>
-                  </div>
-                  <button className="flex items-center space-x-1 text-teal-600 hover:text-teal-700 transition-colors duration-300 btn-hover-smooth">
-                    <ThumbsUp size={14} />
-                    <span>Naudinga ({review.helpful})</span>
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Write Review CTA */}

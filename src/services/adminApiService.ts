@@ -165,6 +165,15 @@ export const reviewsAPI = {
     return response.json();
   },
 
+  unapprove: async (id: number) => {
+    const response = await fetch(`${API_BASE_URL}/admin/reviews/${id}/unapprove`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to unapprove review');
+    return response.json();
+  },
+
   delete: async (id: number) => {
     const response = await fetch(`${API_BASE_URL}/admin/reviews/${id}`, {
       method: 'DELETE',
@@ -193,6 +202,22 @@ export const reviewsAPI = {
       body: JSON.stringify(reviewData),
     });
     if (!response.ok) throw new Error('Failed to submit review');
+    return response.json();
+  },
+
+  update: async (id: number, reviewData: {
+    name: string;
+    email: string;
+    rating: number;
+    comment: string;
+    trip_reference?: string;
+  }) => {
+    const response = await fetch(`${API_BASE_URL}/admin/reviews/${id}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(reviewData),
+    });
+    if (!response.ok) throw new Error('Failed to update review');
     return response.json();
   },
 };
