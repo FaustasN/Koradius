@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Star, ChevronLeft, ChevronRight, Quote, Filter, Calendar, MapPin, ThumbsUp, ChevronDown, X, Send } from 'lucide-react';
+import { reviewsAPI } from '../services/adminApiService';
 
 const ReviewsPage = () => {
   const navigate = useNavigate();
@@ -15,10 +16,13 @@ const ReviewsPage = () => {
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [reviewForm, setReviewForm] = useState({
     name: '',
+    email: '',
     description: '',
     rating: 0,
-    category: 'vacation'
+    category: 'vacation',
+    tripReference: ''
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const reviews = [
     {
@@ -191,10 +195,10 @@ const ReviewsPage = () => {
     setReviewForm(prev => ({ ...prev, rating }));
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!reviewForm.name.trim() || !reviewForm.description.trim() || reviewForm.rating === 0) {
+    if (!reviewForm.name.trim() || !reviewForm.email.trim() || !reviewForm.description.trim() || reviewForm.rating === 0) {
       alert('Prašome užpildyti visus laukus ir pasirinkti įvertinimą');
       return;
     }
@@ -204,44 +208,47 @@ const ReviewsPage = () => {
       return;
     }
 
-    // Here you would typically send the review to your backend
-    const newReview = {
-      id: Date.now(),
-      name: reviewForm.name,
-      age: 0, // You could add age field if needed
-      location: "Lietuva",
-      rating: reviewForm.rating,
-      text: reviewForm.description,
-      trip: reviewForm.category,
-      image: "https://images.pexels.com/photos/1181686/pexels-photo-1181686.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop",
-      date: new Date().toISOString().split('T')[0],
-      category: reviewForm.category,
-      helpful: 0,
-      verified: false
-    };
+    setIsSubmitting(true);
+    
+    try {
+      // Submit review to backend API
+      await reviewsAPI.submit({
+        name: reviewForm.name,
+        email: reviewForm.email,
+        rating: reviewForm.rating,
+        comment: reviewForm.description,
+        tripReference: reviewForm.tripReference || undefined
+      });
 
-    // Add to reviews array (in a real app, this would go to backend)
-    // reviews.unshift(newReview);
-    
-    // Reset form and close
-    setReviewForm({
-      name: '',
-      description: '',
-      rating: 0,
-      category: 'vacation'
-    });
-    setShowReviewForm(false);
-    
-    alert('Ačiū už jūsų atsiliepimą! Jis bus peržiūrėtas ir patvirtintas.');
+      // Reset form and close
+      setReviewForm({
+        name: '',
+        email: '',
+        description: '',
+        rating: 0,
+        category: 'vacation',
+        tripReference: ''
+      });
+      setShowReviewForm(false);
+      
+      alert('Ačiū už jūsų atsiliepimą! Jis bus peržiūrėtas ir patvirtintas.');
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      alert('Atsiprašome, įvyko klaida. Bandykite dar kartą.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleFormClose = () => {
     setShowReviewForm(false);
     setReviewForm({
       name: '',
+      email: '',
       description: '',
       rating: 0,
-      category: 'vacation'
+      category: 'vacation',
+      tripReference: ''
     });
   };
 
@@ -301,6 +308,21 @@ const ReviewsPage = () => {
                   />
                 </div>
 
+                {/* Email Input */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    El. paštas *
+                  </label>
+                  <input
+                    type="email"
+                    value={reviewForm.email}
+                    onChange={(e) => setReviewForm(prev => ({ ...prev, email: e.target.value }))}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200"
+                    placeholder="Įveskite savo el. paštą"
+                    required
+                  />
+                </div>
+
                 {/* Category Selection */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -317,6 +339,23 @@ const ReviewsPage = () => {
                     <option value="medical">Medicininis turizmas</option>
                     <option value="nature">Gamtos kelionės</option>
                   </select>
+                </div>
+
+                {/* Trip Reference Input (optional) */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Kelionės numeris (nebūtina)
+                  </label>
+                  <input
+                    type="text"
+                    value={reviewForm.tripReference}
+                    onChange={(e) => setReviewForm(prev => ({ ...prev, tripReference: e.target.value }))}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200"
+                    placeholder="Pvz.: KT2024-001"
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Kelionės numeris padės mums geriau suprasti jūsų patirtį
+                  </p>
                 </div>
 
                 {/* Rating Selection */}
@@ -383,10 +422,11 @@ const ReviewsPage = () => {
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 flex items-center justify-center space-x-2"
+                    disabled={isSubmitting}
+                    className="flex-1 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 disabled:hover:scale-100 flex items-center justify-center space-x-2"
                   >
                     <Send size={20} />
-                    <span>Siųsti atsiliepimą</span>
+                    <span>{isSubmitting ? 'Siunčiama...' : 'Siųsti atsiliepimą'}</span>
                   </button>
                 </div>
               </form>
