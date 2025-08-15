@@ -251,20 +251,12 @@ const GalleryPage = () => {
                     </div>
                     <h3 className="text-2xl font-bold">{selectedImageData.title}</h3>
                   </div>
-                  <div className="flex items-center space-x-4">
-                    <button className="flex items-center space-x-2 bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-lg transition-colors duration-300">
-                      <Heart size={18} />
-                      <span>{selectedImageData.likes}</span>
-                    </button>
-                    <button className="flex items-center space-x-2 bg-teal-50 hover:bg-teal-100 text-teal-600 px-4 py-2 rounded-lg transition-colors duration-300">
-                      <Share2 size={18} />
-                      <span>Dalintis</span>
-                    </button>
-                    <button className="flex items-center space-x-2 bg-gray-50 hover:bg-gray-100 text-gray-600 px-4 py-2 rounded-lg transition-colors duration-300">
-                      <Download size={18} />
-                      <span>Atsisiųsti</span>
-                    </button>
-                  </div>
+                                     <div className="flex items-center space-x-4">
+                     <button className="flex items-center space-x-2 bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-lg transition-colors duration-300">
+                       <Heart size={18} />
+                       <span>{selectedImageData.likes}</span>
+                     </button>
+                   </div>
                 </div>
                 
                 <div className="flex items-center justify-between text-sm text-gray-600">
@@ -281,21 +273,16 @@ const GalleryPage = () => {
           <Camera size={64} className="mx-auto mb-6 opacity-80" />
           <h2 className="text-3xl font-bold mb-4">Pasidalinkite savo kelionių nuotraukomis</h2>
           <p className="text-xl opacity-90 mb-8 max-w-2xl mx-auto">
-            Norite, kad jūsų nuotraukos atsidurtų mūsų galerijoje? Siųskite jas mums ir įkvėpkite kitus keliautojus!
+            Norite, kad jūsų nuotraukos atsidurtų mūsų galerijoje? Siųskite jas į{' '}
+            <a 
+              href="mailto:koradiustravel@gmail.com" 
+              className="text-black hover:text-gray-800 underline transition-colors duration-200"
+            >
+              koradiustravel@gmail.com
+            </a>{' '}
+            ir įkvėpkite kitus keliautojus!
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button 
-              onClick={handleUploadPhotos}
-              className="bg-white hover:bg-gray-100 text-teal-600 font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg"
-            >
-              Įkelti nuotraukas
-            </button>
-            <button 
-              onClick={handleLearnMore}
-              className="border-2 border-white hover:bg-white hover:text-teal-600 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105"
-            >
-              Sužinoti daugiau
-            </button>
           </div>
         </div>
 
@@ -334,12 +321,6 @@ const GalleryPage = () => {
           </div>
           
           <div className="text-center mt-8">
-            <button 
-              onClick={handleParticipateContest}
-              className="bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg btn-hover-smooth"
-            >
-              Dalyvauti konkurse
-            </button>
           </div>
         </div>
       </div>

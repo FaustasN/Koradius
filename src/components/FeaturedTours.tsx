@@ -125,15 +125,6 @@ const FeaturedTours = () => {
                   {tour.description}
                 </p>
 
-                {/* Rating */}
-                <div className="flex items-center space-x-2 mb-4">
-                  <div className="flex items-center space-x-1">
-                    <Star className="text-yellow-400 fill-current" size={18} />
-                    <span className="font-semibold text-gray-800">{tour.rating}</span>
-                  </div>
-                  <span className="text-gray-500">({tour.reviews} atsiliepimai)</span>
-                </div>
-
                 {/* Includes */}
                 <div className="mb-6">
                   <h4 className="font-semibold text-gray-800 mb-2">Įskaičiuota:</h4>
@@ -156,12 +147,6 @@ const FeaturedTours = () => {
                     className="flex-1 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg btn-hover-smooth"
                   >
                     Užsisakyti dabar
-                  </button>
-                  <button 
-                    onClick={() => handleMoreInfo(tour.id)}
-                    className="px-6 py-3 border-2 border-teal-500 text-teal-600 hover:bg-teal-500 hover:text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 btn-hover-smooth"
-                  >
-                    Daugiau
                   </button>
                 </div>
               </div>
