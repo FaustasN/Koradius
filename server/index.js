@@ -10,6 +10,11 @@ const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const nodemailer = require('nodemailer');
 
+// Initialize queue system
+const { queueEmail } = require('./queues/emailQueue');
+const queueManager = require('./queues/manager');
+const { bullBoardRouter } = require('./queues/monitor');
+
 // Email transporter configuration
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -28,6 +33,10 @@ try {
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const INSTANCE_ID = process.env.INSTANCE_ID || 'backend-main';
+
+// Queue system initialization
+console.log(`🔄 Initializing queue system for instance: ${INSTANCE_ID}...`);
 
 // Environment variables for security
 const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(64).toString('hex');
@@ -141,23 +150,29 @@ app.use(express.json());
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Email endpoint
+// Queue monitoring dashboard (protected)
+app.use('/admin/queues', authenticateToken, bullBoardRouter);
+
+// Email endpoint - now using queue
 app.post('/api/send-email', async (req, res) => {
   try {
-    const { to, subject, text, html } = req.body;
+    const { to, subject, text, html, priority = 'normal' } = req.body;
     
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
+    // Add email to queue instead of sending directly
+    const job = await queueEmail({
       to,
       subject,
       text,
       html
-    };
+    }, { priority });
     
-    await transporter.sendMail(mailOptions);
-    res.json({ success: true, message: 'Laiškas išsiųstas!' });
+    res.json({ 
+      success: true, 
+      message: 'Laiškas sėkmingai įtrauktas į eilę!',
+      jobId: job.id 
+    });
   } catch (error) {
-    console.error('Email sending error:', error);
+    console.error('Email queueing error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -1004,19 +1019,88 @@ app.get('/api/notifications/unread-count', authenticateToken, async (req, res) =
 });
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Server is running' });
+app.get('/api/health', async (req, res) => {
+  try {
+    // Check database connection
+    await pool.query('SELECT 1');
+    
+    // Check queue health
+    const queueHealth = await queueManager.getHealthStatus();
+    
+    const isHealthy = Object.values(queueHealth).every(queue => queue.healthy);
+    
+    res.json({ 
+      status: isHealthy ? 'OK' : 'DEGRADED',
+      message: 'Server is running',
+      instance: INSTANCE_ID,
+      timestamp: new Date().toISOString(),
+      database: 'connected',
+      queues: queueHealth
+    });
+  } catch (error) {
+    res.status(503).json({ 
+      status: 'ERROR',
+      message: 'Health check failed',
+      instance: INSTANCE_ID,
+      timestamp: new Date().toISOString(),
+      error: error.message
+    });
+  }
+});
+
+// Queue statistics endpoint (protected)
+app.get('/api/admin/queue-stats', authenticateToken, async (req, res) => {
+  try {
+    const stats = await queueManager.getQueueStats();
+    res.json({
+      ...stats,
+      instance: INSTANCE_ID,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error fetching queue stats:', error);
+    res.status(500).json({ error: 'Failed to fetch queue statistics' });
+  }
+});
+
+// Instance information endpoint (protected)
+app.get('/api/admin/instance-info', authenticateToken, async (req, res) => {
+  try {
+    res.json({
+      instance: INSTANCE_ID,
+      port: PORT,
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+      nodeVersion: process.version,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error fetching instance info:', error);
+    res.status(500).json({ error: 'Failed to fetch instance information' });
+  }
 });
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🚀 Server instance ${INSTANCE_ID} running on port ${PORT}`);
   console.log(`📊 API available at http://localhost:${PORT}/api`);
 });
 
 // Graceful shutdown
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
   console.log('Shutting down server...');
-  pool.end();
-  process.exit(0);
+  
+  try {
+    // Close queue connections
+    await queueManager.shutdown();
+    
+    // Close database connection
+    await pool.end();
+    
+    console.log('Graceful shutdown completed');
+    process.exit(0);
+  } catch (error) {
+    console.error('Error during shutdown:', error);
+    process.exit(1);
+  }
 }); 
