@@ -22,22 +22,63 @@ services:
       timeout: 10s
       retries: 5
 
-  # Backend API Server
-  backend:
+  # Redis for message queuing
+  redis:
+    image: redis:7-alpine
+    container_name: koradius_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - koradius_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Nginx Load Balancer
+  nginx:
+    image: nginx:alpine
+    container_name: koradius_nginx
+    restart: always
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend-1
+      - backend-2
+    networks:
+      - koradius_network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Backend API Server - Instance 1
+  backend-1:
     build:
       context: ./server
       dockerfile: Dockerfile
-    container_name: koradius_backend
+    container_name: koradius_backend_1
     restart: always
     environment:
       NODE_ENV: production
       PORT: 3001
+      INSTANCE_ID: backend-1
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: ${POSTGRES_DB:-mydatabase}
       DB_USER: ${POSTGRES_USER:-myuser}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-mypassword}
       DB_SSL: "false"
+      # Redis Configuration
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
       JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-this-in-production}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-your-64-character-hex-encryption-key-for-sensitive-data-change-this}
@@ -49,12 +90,62 @@ services:
       WEBTOPAY_PROJECT_ID: 249340
       WEBTOPAY_PASSWORD: add08f927c0dec3bdf1f6d3af8db187e
       WEBTOPAY_TEST_MODE: true
-    ports:
-      - "3001:3001"
+    expose:
+      - "3001"
     volumes:
       - ./uploads:/app/uploads
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - koradius_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Backend API Server - Instance 2
+  backend-2:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: koradius_backend_2
+    restart: always
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      INSTANCE_ID: backend-2
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-mydatabase}
+      DB_USER: ${POSTGRES_USER:-myuser}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-mypassword}
+      DB_SSL: "false"
+      # Redis Configuration
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-this-in-production}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-your-64-character-hex-encryption-key-for-sensitive-data-change-this}
+      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-admin123}
+      # NodeMailer Configuration
+      EMAIL_USER: ${EMAIL_USER:-systemsairbag@gmail.com}
+      EMAIL_PASS: ${EMAIL_PASS:-snbh yglc chip bzqg}
+      # WebToPay Configuration
+      WEBTOPAY_PROJECT_ID: 249340
+      WEBTOPAY_PASSWORD: add08f927c0dec3bdf1f6d3af8db187e
+      WEBTOPAY_TEST_MODE: true
+    expose:
+      - "3001"
+    volumes:
+      - ./uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - koradius_network
@@ -66,6 +157,7 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:
 
 networks:
   koradius_network:
