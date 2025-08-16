@@ -17,19 +17,30 @@ const emailWorker = new Worker('email processing', async (job) => {
   
   console.log(`Processing email job ${job.id}: ${subject}`);
   
+  // Validate required fields
+  if (!to || to.trim() === '') {
+    throw new Error(`No recipient specified for email job ${job.id}`);
+  }
+  
+  if (!subject || subject.trim() === '') {
+    throw new Error(`No subject specified for email job ${job.id}`);
+  }
+  
   try {
     const mailOptions = {
       from: process.env.EMAIL_USER,
-      to,
-      subject,
-      text,
-      html
+      to: to.trim(),
+      subject: subject.trim(),
+      text: text || '',
+      html: html || text || ''
     };
+    
+    console.log(`Sending email to: ${mailOptions.to}, subject: ${mailOptions.subject}`);
     
     const result = await transporter.sendMail(mailOptions);
     
-    console.log(`Email sent successfully: ${job.id}`);
-    return { success: true, messageId: result.messageId };
+    console.log(`Email sent successfully: ${job.id}, messageId: ${result.messageId}`);
+    return { success: true, messageId: result.messageId, recipient: mailOptions.to };
     
   } catch (error) {
     console.error(`Email sending failed for job ${job.id}:`, error);

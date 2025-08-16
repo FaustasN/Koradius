@@ -1,11 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Settings, Image, MessageSquare, Clock, Plus, Edit, Trash2, Bell, Package, Database, Search, Star, Phone, Mail, Home, CheckCircle, Eye, EyeOff, ChevronUp, ChevronDown, BarChart3 } from 'lucide-react';
+import { LogOut, Settings, Image, MessageSquare, Clock, Plus, Edit, Trash2, Bell, Package, Database, Search, Star, Phone, Mail, Home, CheckCircle, Eye, EyeOff, ChevronUp, ChevronDown, BarChart3, Server } from 'lucide-react';
 import ImageUpload from '../components/ImageUpload';
 import GoogleAnalytics from '../components/GoogleAnalytics';
+import ServerMonitoring from '../components/ServerMonitoring';
 import { notificationsAPI, contactsAPI, reviewsAPI } from '../services/adminApiService';
+import { galleryApi, travelPacketsApi } from '../services/apiService';
 import { useNotificationManager } from '../utils/notificationUtils';
+
+// API Base URL
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
 // Types for our data structures
 interface GalleryItem {
@@ -97,7 +102,7 @@ const DashboardPage = () => {
   const notificationManager = useNotificationManager();
   const [userInfo, setUserInfo] = useState<{ username: string; role: string; exp: number } | null>(null);
   const [timeUntilExpiry, setTimeUntilExpiry] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'gallery' | 'packets' | 'zinutes' | 'atsiliepimai' | 'analytics'>('gallery');
+  const [activeTab, setActiveTab] = useState<'gallery' | 'packets' | 'zinutes' | 'atsiliepimai' | 'analytics' | 'server'>('gallery');
   const [isLoading, setIsLoading] = useState(false);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
 
@@ -365,28 +370,22 @@ const DashboardPage = () => {
   // API service functions
   const loadGalleryItems = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/gallery');
+      const data = await galleryApi.getAll();
       
-      if (response.ok) {
-        const data = await response.json();
-        
-        // Transform API data to match our interface
-        const transformedData: GalleryItem[] = data.map((item: any) => ({
-          id: item.id,
-          title: item.title,
-          location: item.location,
-          category: item.category,
-          imageUrl: item.image_url,
-          photographer: item.photographer,
-          date: item.date,
-          likes: item.likes,
-          isActive: item.is_active
-        }));
-        
-        setGalleryItems(transformedData);
-      } else {
-        throw new Error('Failed to fetch gallery items');
-      }
+      // Transform API data to match our interface
+      const transformedData: GalleryItem[] = data.map((item: any) => ({
+        id: item.id,
+        title: item.title,
+        location: item.location,
+        category: item.category,
+        imageUrl: item.image_url,
+        photographer: item.photographer,
+        date: item.date,
+        likes: item.likes,
+        isActive: item.is_active
+      }));
+      
+      setGalleryItems(transformedData);
     } catch (error) {
       console.error('Error loading gallery items:', error);
     }
@@ -394,35 +393,29 @@ const DashboardPage = () => {
 
   const loadTravelPackets = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/travel-packets');
+      const data = await travelPacketsApi.getAll();
       
-      if (response.ok) {
-        const data = await response.json();
-        
-        // Transform API data to match our interface
-        const transformedData: TravelPacket[] = data.map((item: any) => ({
-          id: item.id,
-          title: item.title,
-          location: item.location,
-          duration: item.duration,
-          price: parseFloat(item.price),
-          originalPrice: item.original_price ? parseFloat(item.original_price) : undefined,
-          rating: parseFloat(item.rating),
-          reviews: item.reviews,
-          imageUrl: item.image_url,
-          category: item.category,
-          badge: item.badge,
-          description: item.description,
-          includes: item.includes || [],
-          availableSpots: item.available_spots,
-          departure: item.departure,
-          isActive: item.is_active
-        }));
-        
-        setTravelPackets(transformedData);
-      } else {
-        throw new Error('Failed to fetch travel packets');
-      }
+      // Transform API data to match our interface
+      const transformedData: TravelPacket[] = data.map((item: any) => ({
+        id: item.id,
+        title: item.title,
+        location: item.location,
+        duration: item.duration,
+        price: parseFloat(item.price),
+        originalPrice: item.original_price ? parseFloat(item.original_price) : undefined,
+        rating: parseFloat(item.rating),
+        reviews: item.reviews,
+        imageUrl: item.image_url,
+        category: item.category,
+        badge: item.badge,
+        description: item.description,
+        includes: item.includes || [],
+        availableSpots: item.available_spots,
+        departure: item.departure,
+        isActive: item.is_active
+      }));
+      
+      setTravelPackets(transformedData);
     } catch (error) {
       console.error('Error loading travel packets:', error);
     }
@@ -753,8 +746,8 @@ const DashboardPage = () => {
     try {
       const method = selectedGalleryItem ? 'PUT' : 'POST';
       const url = selectedGalleryItem 
-        ? `http://localhost:3001/api/gallery/${selectedGalleryItem.id}` 
-        : 'http://localhost:3001/api/gallery';
+        ? `${API_BASE_URL}/gallery/${selectedGalleryItem.id}` 
+        : `${API_BASE_URL}/gallery`;
       
       const response = await fetch(url, {
         method,
@@ -778,7 +771,7 @@ const DashboardPage = () => {
   const handleDeleteGalleryItem = async (id: number) => {
     if (window.confirm('Ar tikrai norite ištrinti šią nuotrauką?')) {
       try {
-        const response = await fetch(`http://localhost:3001/api/gallery/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/gallery/${id}`, {
           method: 'DELETE'
         });
 
@@ -849,8 +842,8 @@ const DashboardPage = () => {
       
       const method = selectedPacket ? 'PUT' : 'POST';
       const url = selectedPacket 
-        ? `http://localhost:3001/api/travel-packets/${selectedPacket.id}` 
-        : 'http://localhost:3001/api/travel-packets';
+        ? `${API_BASE_URL}/travel-packets/${selectedPacket.id}` 
+        : `${API_BASE_URL}/travel-packets`;
       
       const response = await fetch(url, {
         method,
@@ -874,7 +867,7 @@ const DashboardPage = () => {
   const handleDeletePacket = async (id: number) => {
     if (window.confirm('Ar tikrai norite ištrinti šį kelionės paketą?')) {
       try {
-        const response = await fetch(`http://localhost:3001/api/travel-packets/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/travel-packets/${id}`, {
           method: 'DELETE'
         });
 
@@ -1239,6 +1232,19 @@ const DashboardPage = () => {
               <div className="flex items-center justify-center space-x-2">
                 <BarChart3 className="h-5 w-5" />
                 <span>Analytics</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('server')}
+              className={`flex-1 px-6 py-4 text-sm font-medium transition-colors duration-200 ${
+                activeTab === 'server'
+                  ? 'text-purple-600 border-b-2 border-purple-600 bg-purple-50'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center justify-center space-x-2">
+                <Server className="h-5 w-5" />
+                <span>Server</span>
               </div>
             </button>
           </div>
@@ -1860,6 +1866,11 @@ const DashboardPage = () => {
                 {/* Analytics Tab */}
                 {activeTab === 'analytics' && (
                   <GoogleAnalytics />
+                )}
+
+                {/* Server Monitoring Tab */}
+                {activeTab === 'server' && (
+                  <ServerMonitoring />
                 )}
 
               </>
