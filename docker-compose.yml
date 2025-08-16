@@ -54,7 +54,7 @@ services:
     networks:
       - koradius_network
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/api/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -70,6 +70,7 @@ services:
       NODE_ENV: production
       PORT: 3001
       INSTANCE_ID: backend-1
+      BASE_URL: http://localhost:8080
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: ${POSTGRES_DB:-mydatabase}
@@ -118,6 +119,7 @@ services:
       NODE_ENV: production
       PORT: 3001
       INSTANCE_ID: backend-2
+      BASE_URL: http://localhost:8080
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: ${POSTGRES_DB:-mydatabase}
