@@ -45,6 +45,10 @@ services:
       # NodeMailer Configuration
       EMAIL_USER: ${EMAIL_USER:-systemsairbag@gmail.com}
       EMAIL_PASS: ${EMAIL_PASS:-snbh yglc chip bzqg}
+      # WebToPay Configuration
+      WEBTOPAY_PROJECT_ID: 249340
+      WEBTOPAY_PASSWORD: add08f927c0dec3bdf1f6d3af8db187e
+      WEBTOPAY_TEST_MODE: true
     ports:
       - "3001:3001"
     volumes:

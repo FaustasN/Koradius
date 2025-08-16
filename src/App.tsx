@@ -12,6 +12,9 @@ import DashboardLoginPage from './pages/DashboardLoginPage';
 import DashboardPage from './pages/DashboardPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import SearchPage from './pages/SearchPage';
+import PaymentPage from './pages/PaymentPage';
+import PaymentSuccessPage from './pages/PaymentSuccessPage';
+import PaymentCancelledPage from './pages/PaymentCancelledPage';
 
 const App = () => {
   return (
@@ -25,6 +28,9 @@ const App = () => {
           <Route path="about" element={<AboutPage />} />
           <Route path="contact" element={<ContactPage />} />
           <Route path="search" element={<SearchPage />} />
+          <Route path="payment" element={<PaymentPage />} />
+          <Route path="payment-success" element={<PaymentSuccessPage />} />
+          <Route path="payment-cancelled" element={<PaymentCancelledPage />} />
         </Route>
         
 

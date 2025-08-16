@@ -9,6 +9,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const nodemailer = require('nodemailer');
+const paymentRoutes = require('./paymentRoutes');
 
 // Email transporter configuration
 const transporter = nodemailer.createTransport({
@@ -140,6 +141,9 @@ app.use(cors());
 app.use(express.json());
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Payment routes
+app.use('/api/payment', paymentRoutes);
 
 // Email endpoint
 app.post('/api/send-email', async (req, res) => {
