@@ -26,6 +26,8 @@ const ReviewsPage = () => {
   const [filterRating, setFilterRating] = useState('all');
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
+  const [showErrorNotification, setShowErrorNotification] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [reviewForm, setReviewForm] = useState({
     name: '',
     email: '',
@@ -102,16 +104,35 @@ const ReviewsPage = () => {
     setReviewForm(prev => ({ ...prev, rating }));
   };
 
+  const displayErrorNotification = (message: string) => {
+    setErrorMessage(message);
+    setShowErrorNotification(true);
+    setTimeout(() => {
+      setShowErrorNotification(false);
+    }, 5000);
+  };
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validation checks
     if (!reviewForm.name.trim() || !reviewForm.email.trim() || !reviewForm.description.trim() || reviewForm.rating === 0) {
-      alert('Prašome užpildyti visus laukus ir pasirinkti įvertinimą');
+      displayErrorNotification('Prašome užpildyti visus laukus ir pasirinkti įvertinimą');
       return;
     }
 
-    if (reviewForm.description.trim().length < 50) {
-      alert('Atsiliepimas turi būti bent 50 simbolių ilgio');
+    if (reviewForm.name.trim().length < 3) {
+      displayErrorNotification('Vardas turi būti bent 3 raidžių ilgio');
+      return;
+    }
+
+    if (!reviewForm.email.includes('@') || !reviewForm.email.includes('.')) {
+      displayErrorNotification('El. paštas turi turėti @ ir . simbolius');
+      return;
+    }
+
+    if (reviewForm.description.trim().length < 15) {
+      displayErrorNotification('Atsiliepimas turi būti bent 15 simbolių ilgio');
       return;
     }
 
@@ -157,7 +178,7 @@ const ReviewsPage = () => {
       
     } catch (error) {
       console.error('Error submitting review:', error);
-      alert('Atsiprašome, įvyko klaida. Bandykite dar kartą.');
+      displayErrorNotification('Atsiprašome, įvyko klaida. Bandykite dar kartą.');
     } finally {
       setIsSubmitting(false);
     }
@@ -225,26 +246,26 @@ const ReviewsPage = () => {
         </div>
       )}
 
-      {/* Success Notification */}
-      {showSuccessNotification && (
+      {/* Error Notification */}
+      {showErrorNotification && (
         <div className="fixed top-24 right-4 z-50 animate-slide-in-right">
-          <div className="bg-white rounded-2xl shadow-2xl border-l-4 border-green-500 p-6 max-w-sm transform transition-all duration-500 ease-out">
+          <div className="bg-white rounded-2xl shadow-2xl border-l-4 border-red-500 p-6 max-w-sm transform transition-all duration-500 ease-out">
             <div className="flex items-start space-x-4">
               <div className="flex-shrink-0">
-                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                  <CheckCircle className="text-green-600" size={24} />
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                  <X className="text-red-600" size={24} />
                 </div>
               </div>
               <div className="flex-1">
                 <h3 className="text-lg font-bold text-gray-800 mb-1">
-                  Ačiū už atsiliepimą!
+                  Klaida
                 </h3>
                 <p className="text-gray-600 text-sm leading-relaxed">
-                  Jūsų atsiliepimas buvo sėkmingai išsiųstas ir bus peržiūrėtas. Jis padės kitiems keliautojams pasirinkti tinkamą kelionę.
+                  {errorMessage}
                 </p>
               </div>
               <button
-                onClick={() => setShowSuccessNotification(false)}
+                onClick={() => setShowErrorNotification(false)}
                 className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors duration-200"
               >
                 <X size={20} />
@@ -253,7 +274,7 @@ const ReviewsPage = () => {
             
             {/* Progress bar */}
             <div className="mt-4 w-full bg-gray-200 rounded-full h-1">
-              <div className="bg-green-500 h-1 rounded-full animate-progress-bar"></div>
+              <div className="bg-red-500 h-1 rounded-full animate-progress-bar"></div>
             </div>
           </div>
         </div>
@@ -393,12 +414,12 @@ const ReviewsPage = () => {
                   />
                   <div className="flex justify-between items-center mt-2">
                     <p className="text-sm text-gray-500">
-                      Minimalus ilgis: 50 simbolių
+                      Minimalus ilgis: 15 simbolių
                     </p>
                     <p className={`text-sm font-medium ${
-                      reviewForm.description.length >= 50 ? 'text-green-600' : 'text-gray-500'
+                      reviewForm.description.length >= 15 ? 'text-green-600' : 'text-gray-500'
                     }`}>
-                      {reviewForm.description.length}/50 simbolių
+                      {reviewForm.description.length}/15 simbolių
                     </p>
                   </div>
                 </div>
@@ -558,9 +579,9 @@ const ReviewsPage = () => {
 
                   {/* Dots Indicator */}
                   <div className="flex justify-center space-x-2 mt-8">
-                    {filteredReviews.map((_, index) => (
+                    {filteredReviews.map((review, index) => (
                       <button
-                        key={`dot-${index}`}
+                        key={`dot-${review.id}-${index}`}
                         onClick={() => setCurrentReview(index)}
                         className={`w-3 h-3 rounded-full transition-all duration-300 ${
                           index === currentReview

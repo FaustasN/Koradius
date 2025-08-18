@@ -10,10 +10,12 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Company Info */}
           <div className="lg:col-span-1">
-            <div className="flex items-center space-x-2 mb-6">
-              <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-lg">K</span>
-              </div>
+            <div className="flex items-center space-x-3 mb-6">
+              <img 
+                src="/Icon/Logo_Koradius_EN-max-300x228.png" 
+                alt="Koradius Travel Logo" 
+                className="h-12 w-auto"
+              />
               <span className="text-2xl font-bold">Koradius Travel</span>
             </div>
             <p className="text-gray-300 leading-relaxed mb-6">
@@ -97,15 +99,10 @@ const Footer = () => {
 
           {/* Services */}
           <div>
-            <h3 className="text-xl font-bold mb-6">Paslaugos</h3>
+            
             <ul className="space-y-3 text-gray-300">
               <li>
-                <Link
-                  to="/search"
-                  className="hover:text-teal-400 transition-colors duration-300 cursor-pointer btn-hover-smooth block"
-                >
-                  Ieškoti kelionių
-                </Link>
+              
               </li>
             </ul>
           </div>

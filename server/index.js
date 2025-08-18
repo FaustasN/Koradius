@@ -694,6 +694,33 @@ app.delete('/api/gallery/:id', async (req, res) => {
   }
 });
 
+// Like/unlike gallery item
+app.post('/api/gallery/:id/like', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { action } = req.body; // 'like' or 'unlike'
+    
+    if (action === 'like') {
+      const result = await pool.query(
+        'UPDATE gallery SET likes = likes + 1, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING likes',
+        [id]
+      );
+      res.json({ likes: result.rows[0].likes });
+    } else if (action === 'unlike') {
+      const result = await pool.query(
+        'UPDATE gallery SET likes = GREATEST(likes - 1, 0), updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING likes',
+        [id]
+      );
+      res.json({ likes: result.rows[0].likes });
+    } else {
+      res.status(400).json({ error: 'Invalid action. Use "like" or "unlike"' });
+    }
+  } catch (error) {
+    console.error('Error updating gallery item likes:', error);
+    res.status(500).json({ error: 'Failed to update gallery item likes' });
+  }
+});
+
 // Travel packets endpoints
 app.get('/api/travel-packets', async (req, res) => {
   try {

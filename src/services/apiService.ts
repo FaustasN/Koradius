@@ -60,6 +60,18 @@ export const galleryApi = {
     const response = await fetch(`${API_BASE_URL}/gallery?category=${category}`);
     if (!response.ok) throw new Error('Failed to fetch gallery items');
     return response.json();
+  },
+
+  like: async (id: number, action: 'like' | 'unlike'): Promise<{ likes: number }> => {
+    const response = await fetch(`${API_BASE_URL}/gallery/${id}/like`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ action }),
+    });
+    if (!response.ok) throw new Error('Failed to update likes');
+    return response.json();
   }
 };
 

@@ -18,6 +18,8 @@ const ContactPage = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
+  const [showErrorNotification, setShowErrorNotification] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -27,8 +29,48 @@ const ContactPage = () => {
     }));
   };
 
+  const displayErrorNotification = (message: string) => {
+    setErrorMessage(message);
+    setShowErrorNotification(true);
+    setTimeout(() => {
+      setShowErrorNotification(false);
+    }, 5000);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validation checks
+    if (!formData.name.trim() || !formData.email.trim() || !formData.subject || !formData.message.trim()) {
+      displayErrorNotification('Prašome užpildyti visus privalomus laukus');
+      return;
+    }
+
+    if (formData.name.trim().length < 3) {
+      displayErrorNotification('Vardas turi būti bent 3 raidžių ilgio');
+      return;
+    }
+
+    if (!formData.email.includes('@') || !formData.email.includes('.')) {
+      displayErrorNotification('El. paštas turi turėti @ ir . simbolius');
+      return;
+    }
+
+    if (formData.phone && (formData.phone.length < 6 || !/^\d+$/.test(formData.phone))) {
+      displayErrorNotification('Telefono numeris turi būti bent 6 skaičių ir turėti tik skaičius');
+      return;
+    }
+
+    if (formData.message.trim().length < 3) {
+      displayErrorNotification('Žinutė turi būti bent 3 simbolių ilgio');
+      return;
+    }
+
+    if (formData.message.trim().length > 70) {
+      displayErrorNotification('Žinutė negali būti ilgesnė nei 70 simbolių');
+      return;
+    }
+
     setIsSubmitting(true);
     
     try {
@@ -67,7 +109,7 @@ const ContactPage = () => {
       
     } catch (error) {
       console.error('Error submitting contact form:', error);
-      alert('Atsiprašome, įvyko klaida. Bandykite dar kartą arba susisiekite telefonu.');
+      displayErrorNotification('Atsiprašome, įvyko klaida. Bandykite dar kartą arba susisiekite telefonu.');
     } finally {
       setIsSubmitting(false);
     }
@@ -157,6 +199,40 @@ const ContactPage = () => {
         </div>
       )}
 
+      {/* Error Notification */}
+      {showErrorNotification && (
+        <div className="fixed top-24 right-4 z-50 animate-slide-in-right">
+          <div className="bg-white rounded-2xl shadow-2xl border-l-4 border-red-500 p-6 max-w-sm transform transition-all duration-500 ease-out">
+            <div className="flex items-start space-x-4">
+              <div className="flex-shrink-0">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                  <X className="text-red-600" size={24} />
+                </div>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-gray-800 mb-1">
+                  Klaida
+                </h3>
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  {errorMessage}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowErrorNotification(false)}
+                className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            {/* Progress bar */}
+            <div className="mt-4 w-full bg-gray-200 rounded-full h-1">
+              <div className="bg-red-500 h-1 rounded-full animate-progress-bar"></div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="container mx-auto px-4 py-8">
         {/* Page Header */}
         <FadeInAnimation className="text-center mb-12">
@@ -169,7 +245,7 @@ const ContactPage = () => {
         </FadeInAnimation>
 
         {/* Quick Contact Options */}
-        <StaggeredAnimation className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        <StaggeredAnimation className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
           <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-2xl p-6 text-white text-center hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 btn-hover-smooth">
             <Phone size={48} className="mx-auto mb-4" />
             <h3 className="text-xl font-bold mb-2">Skambinkite dabar</h3>
@@ -194,14 +270,7 @@ const ContactPage = () => {
             </a>
           </div>
 
-          <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-2xl p-6 text-white text-center hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 btn-hover-smooth">
-            <MessageCircle size={48} className="mx-auto mb-4" />
-            <h3 className="text-xl font-bold mb-2">Live Chat</h3>
-            <p className="mb-4 opacity-90">Tiesioginis pokalbis su konsultantu</p>
-            <button className="bg-white hover:bg-gray-100 text-purple-600 font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 btn-hover-smooth">
-              Pradėti pokalbį
-            </button>
-          </div>
+  
         </StaggeredAnimation>
 
         {/* Main Content - Redesigned Layout */}
@@ -260,9 +329,16 @@ const ContactPage = () => {
                       type="tel"
                       name="phone"
                       value={formData.phone}
-                      onChange={handleInputChange}
+                      onChange={(e) => {
+                        // Allow only numbers
+                        const value = e.target.value.replace(/\D/g, '');
+                        setFormData(prev => ({
+                          ...prev,
+                          phone: value
+                        }));
+                      }}
                       className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-teal-500 focus:outline-none transition-all duration-300 text-lg"
-                      placeholder="+370 600 12345"
+                      placeholder="37060012345"
                     />
                   </div>
                 </div>
@@ -333,6 +409,16 @@ const ContactPage = () => {
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-teal-500 focus:outline-none transition-all duration-300 text-lg resize-none"
                   placeholder="Parašykite savo klausimą ar pageidavimus..."
                 />
+                <div className="flex justify-between items-center mt-2">
+                  <p className="text-sm text-gray-500">
+                    Minimalus ilgis: 3 simboliai, maksimalus: 70 simbolių
+                  </p>
+                  <p className={`text-sm font-medium ${
+                    formData.message.length >= 3 && formData.message.length <= 70 ? 'text-green-600' : 'text-gray-500'
+                  }`}>
+                    {formData.message.length}/70 simbolių
+                  </p>
+                </div>
               </div>
 
               <button
