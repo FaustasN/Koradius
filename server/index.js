@@ -9,6 +9,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const nodemailer = require('nodemailer');
+const paymentRoutes = require('./paymentRoutes');
 
 // Email transporter configuration
 const transporter = nodemailer.createTransport({
@@ -140,6 +141,9 @@ app.use(cors());
 app.use(express.json());
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Payment routes
+app.use('/api/payment', paymentRoutes);
 
 // Email endpoint
 app.post('/api/send-email', async (req, res) => {
@@ -687,6 +691,33 @@ app.delete('/api/gallery/:id', async (req, res) => {
   } catch (error) {
     console.error('Error deleting gallery item:', error);
     res.status(500).json({ error: 'Failed to delete gallery item' });
+  }
+});
+
+// Like/unlike gallery item
+app.post('/api/gallery/:id/like', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { action } = req.body; // 'like' or 'unlike'
+    
+    if (action === 'like') {
+      const result = await pool.query(
+        'UPDATE gallery SET likes = likes + 1, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING likes',
+        [id]
+      );
+      res.json({ likes: result.rows[0].likes });
+    } else if (action === 'unlike') {
+      const result = await pool.query(
+        'UPDATE gallery SET likes = GREATEST(likes - 1, 0), updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING likes',
+        [id]
+      );
+      res.json({ likes: result.rows[0].likes });
+    } else {
+      res.status(400).json({ error: 'Invalid action. Use "like" or "unlike"' });
+    }
+  } catch (error) {
+    console.error('Error updating gallery item likes:', error);
+    res.status(500).json({ error: 'Failed to update gallery item likes' });
   }
 });
 

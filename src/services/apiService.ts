@@ -60,6 +60,18 @@ export const galleryApi = {
     const response = await fetch(`${API_BASE_URL}/gallery?category=${category}`);
     if (!response.ok) throw new Error('Failed to fetch gallery items');
     return response.json();
+  },
+
+  like: async (id: number, action: 'like' | 'unlike'): Promise<{ likes: number }> => {
+    const response = await fetch(`${API_BASE_URL}/gallery/${id}/like`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ action }),
+    });
+    if (!response.ok) throw new Error('Failed to update likes');
+    return response.json();
   }
 };
 
@@ -136,10 +148,61 @@ export const transformTravelPacket = (packet: TravelPacket) => ({
   departure: packet.departure
 });
 
-export default {
+// Main API service object
+export const apiService = {
+  // HTTP methods
+  get: async (url: string) => {
+    // Remove /api prefix if it exists in the URL
+    const cleanUrl = url.startsWith('/api') ? url.substring(4) : url;
+    const response = await fetch(`${API_BASE_URL}${cleanUrl}`);
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    return response.json();
+  },
+
+  post: async (url: string, data: any) => {
+    // Remove /api prefix if it exists in the URL
+    const cleanUrl = url.startsWith('/api') ? url.substring(4) : url;
+    const response = await fetch(`${API_BASE_URL}${cleanUrl}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    return response.json();
+  },
+
+  put: async (url: string, data: any) => {
+    // Remove /api prefix if it exists in the URL
+    const cleanUrl = url.startsWith('/api') ? url.substring(4) : url;
+    const response = await fetch(`${API_BASE_URL}${cleanUrl}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    return response.json();
+  },
+
+  delete: async (url: string) => {
+    // Remove /api prefix if it exists in the URL
+    const cleanUrl = url.startsWith('/api') ? url.substring(4) : url;
+    const response = await fetch(`${API_BASE_URL}${cleanUrl}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    return response.json();
+  },
+
+  // API modules
   galleryApi,
   travelPacketsApi,
   notificationsApi,
   transformGalleryItem,
   transformTravelPacket
 };
+
+export default apiService;

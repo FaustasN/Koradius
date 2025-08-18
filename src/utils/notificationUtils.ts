@@ -1,5 +1,17 @@
 // Simplified notification utilities for admin dashboard (no sound)
 
+// Simple notification utilities for payment pages
+export const notificationUtils = {
+  showSuccess: (message: string) => {
+    console.log('✅ Success:', message);
+    // You can add toast notification here later
+  },
+  showError: (message: string) => {
+    console.error('❌ Error:', message);
+    // You can add toast notification here later
+  }
+};
+
 export class NotificationManager {
   private static instance: NotificationManager;
   private readonly originalTitle: string;

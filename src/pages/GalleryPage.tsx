@@ -12,6 +12,10 @@ const GalleryPage = () => {
   const [images, setImages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Like state
+  const [likedImages, setLikedImages] = useState<Set<number>>(new Set());
+  const [likeLoading, setLikeLoading] = useState<number | null>(null);
 
   // Load gallery images from database
   useEffect(() => {
@@ -33,6 +37,24 @@ const GalleryPage = () => {
     loadImages();
   }, []);
 
+  // Load liked images from localStorage
+  useEffect(() => {
+    const savedLikes = localStorage.getItem('galleryLikes');
+    if (savedLikes) {
+      try {
+        const likedIds = JSON.parse(savedLikes);
+        setLikedImages(new Set(likedIds));
+      } catch (error) {
+        console.error('Error parsing saved likes:', error);
+      }
+    }
+  }, []);
+
+  // Save liked images to localStorage when they change
+  useEffect(() => {
+    localStorage.setItem('galleryLikes', JSON.stringify(Array.from(likedImages)));
+  }, [likedImages]);
+
   const handleUploadPhotos = () => {
     navigate('/contact?subject=Įkelti nuotraukas');
   };
@@ -43,6 +65,60 @@ const GalleryPage = () => {
 
   const handleParticipateContest = () => {
     navigate('/contact?subject=Dalyvauti konkurse');
+  };
+
+  // Format date to readable format
+  const formatDate = (dateString: string) => {
+    if (!dateString) return '';
+    
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return '';
+      
+      return date.toLocaleDateString('lt-LT', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (error) {
+      return '';
+    }
+  };
+
+  // Handle like/unlike functionality
+  const handleLike = async (imageId: number) => {
+    if (likeLoading === imageId) return; // Prevent multiple clicks
+    
+    try {
+      setLikeLoading(imageId);
+      const isLiked = likedImages.has(imageId);
+      const action = isLiked ? 'unlike' : 'like';
+      
+      const result = await galleryApi.like(imageId, action);
+      
+      // Update local state
+      setImages(prevImages => 
+        prevImages.map(img => 
+          img.id === imageId ? { ...img, likes: result.likes } : img
+        )
+      );
+      
+      // Update liked state
+      if (isLiked) {
+        setLikedImages(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(imageId);
+          return newSet;
+        });
+      } else {
+        setLikedImages(prev => new Set(prev).add(imageId));
+      }
+    } catch (error) {
+      console.error('Error updating likes:', error);
+      // You could add a toast notification here
+    } finally {
+      setLikeLoading(null);
+    }
   };
 
   // Fallback images data in case the API is not available  
@@ -103,25 +179,20 @@ const GalleryPage = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12 max-w-2xl mx-auto">
           <div className="bg-white rounded-2xl shadow-lg p-6 text-center">
             <div className="text-3xl font-bold text-teal-600 mb-2">{images.length}</div>
-            <div className="text-gray-600">Nuotraukų</div>
+            <div className="text-gray-600">Nuotraukos</div>
           </div>
-          <div className="bg-white rounded-2xl shadow-lg p-6 text-center">
-            <div className="text-3xl font-bold text-teal-600 mb-2">15</div>
-            <div className="text-gray-600">Šalių</div>
-          </div>
+       
           <div className="bg-white rounded-2xl shadow-lg p-6 text-center">
             <div className="text-3xl font-bold text-teal-600 mb-2">
               {images.reduce((sum, img) => sum + img.likes, 0)}
             </div>
             <div className="text-gray-600">Patinka</div>
           </div>
-          <div className="bg-white rounded-2xl shadow-lg p-6 text-center">
-            <div className="text-3xl font-bold text-teal-600 mb-2">50+</div>
-            <div className="text-gray-600">Fotografų</div>
-          </div>
+        
         </div>
 
         {/* Filters */}
@@ -192,10 +263,25 @@ const GalleryPage = () => {
                   <h3 className="font-bold text-lg mb-2">{image.title}</h3>
                   <div className="flex items-center justify-between">
                     <span className="text-sm opacity-90">Autorius: {image.photographer}</span>
-                    <div className="flex items-center space-x-1">
-                      <Heart size={16} className="text-red-400" />
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleLike(image.id);
+                      }}
+                      disabled={likeLoading === image.id}
+                      className={`flex items-center space-x-1 p-1 rounded transition-colors duration-300 ${
+                        likedImages.has(image.id)
+                          ? 'text-red-500 hover:text-red-400'
+                          : 'text-red-400 hover:text-red-500'
+                      }`}
+                    >
+                      <Heart 
+                        size={16} 
+                        className={likeLoading === image.id ? 'animate-pulse' : ''}
+                        fill={likedImages.has(image.id) ? 'currentColor' : 'none'}
+                      />
                       <span className="text-sm">{image.likes}</span>
-                    </div>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -252,8 +338,20 @@ const GalleryPage = () => {
                     <h3 className="text-2xl font-bold">{selectedImageData.title}</h3>
                   </div>
                                      <div className="flex items-center space-x-4">
-                     <button className="flex items-center space-x-2 bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2 rounded-lg transition-colors duration-300">
-                       <Heart size={18} />
+                     <button 
+                       onClick={() => handleLike(selectedImageData.id)}
+                       disabled={likeLoading === selectedImageData.id}
+                       className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-300 ${
+                         likedImages.has(selectedImageData.id)
+                           ? 'bg-red-500 text-white hover:bg-red-600'
+                           : 'bg-red-50 hover:bg-red-100 text-red-600'
+                       }`}
+                     >
+                       <Heart 
+                         size={18} 
+                         className={likeLoading === selectedImageData.id ? 'animate-pulse' : ''}
+                         fill={likedImages.has(selectedImageData.id) ? 'currentColor' : 'none'}
+                       />
                        <span>{selectedImageData.likes}</span>
                      </button>
                    </div>
@@ -261,7 +359,7 @@ const GalleryPage = () => {
                 
                 <div className="flex items-center justify-between text-sm text-gray-600">
                   <span>Autorius: {selectedImageData.photographer}</span>
-                  <span>Data: {selectedImageData.date}</span>
+                  <span className="ml-1">Data: {formatDate(selectedImageData.date)}</span>
                 </div>
               </div>
             </div>
