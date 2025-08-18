@@ -3,13 +3,14 @@ const { Pool } = require('pg');
 const { v4: uuidv4 } = require('uuid');
 
 /**
- * Base Logger Class - Handles database logging operations
+ * Base Logger Class - Handles queue-based logging operations
  */
 class BaseLogger {
-  constructor(pool, logType = 'application') {
+  constructor(pool, logType = 'application', loggingQueue = null) {
     this.pool = pool;
     this.logType = logType;
     this.instanceId = process.env.INSTANCE_ID || 'backend-main';
+    this.loggingQueue = loggingQueue;
     
     // Create Winston logger for console/file logging as backup
     this.winston = winston.createLogger({
@@ -31,7 +32,14 @@ class BaseLogger {
   }
 
   /**
-   * Log to database with automatic fallback to Winston
+   * Set the logging queue (called after queue initialization)
+   */
+  setLoggingQueue(loggingQueue) {
+    this.loggingQueue = loggingQueue;
+  }
+
+  /**
+   * Log to queue with automatic fallback to direct database or Winston
    */
   async logToDatabase(level, message, metadata = {}, trace = null) {
     const logEntry = {
@@ -39,44 +47,79 @@ class BaseLogger {
       timestamp: new Date(),
       level,
       message,
-      log_type: this.logType,
-      instance_id: this.instanceId,
+      instanceId: this.instanceId,
       metadata: metadata,
-      trace_id: trace?.traceId || null,
-      span_id: trace?.spanId || null,
-      user_id: metadata.userId || null,
-      ip_address: metadata.ipAddress || null,
-      user_agent: metadata.userAgent || null,
-      request_id: metadata.requestId || null,
-      session_id: metadata.sessionId || null
+      traceId: trace?.traceId || null,
+      spanId: trace?.spanId || null,
+      userId: metadata.userId || null,
+      ipAddress: metadata.ipAddress || null,
+      userAgent: metadata.userAgent || null,
+      requestId: metadata.requestId || null,
+      sessionId: metadata.sessionId || null
     };
 
     try {
-      await this.pool.query(`
-        INSERT INTO logs (
-          id, timestamp, level, message, log_type, instance_id, 
-          metadata, trace_id, span_id, user_id, ip_address, 
-          user_agent, request_id, session_id
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-      `, [
-        logEntry.id, logEntry.timestamp, logEntry.level, logEntry.message,
-        logEntry.log_type, logEntry.instance_id, logEntry.metadata,
-        logEntry.trace_id, logEntry.span_id, logEntry.user_id,
-        logEntry.ip_address, logEntry.user_agent, logEntry.request_id,
-        logEntry.session_id
-      ]);
-      
-      return logEntry.id;
-    } catch (error) {
-      // Fallback to Winston if database fails
-      this.winston.error('Failed to log to database, using Winston fallback', {
-        originalLevel: level,
-        originalMessage: message,
-        originalMetadata: metadata,
-        dbError: error.message
+      // Try to queue the log entry first
+      if (this.loggingQueue) {
+        await this.loggingQueue.add('process-log', {
+          type: this.logType,
+          data: logEntry
+        }, {
+          attempts: 3,
+          backoff: {
+            type: 'exponential',
+            delay: 2000,
+          },
+          removeOnComplete: 1000,
+          removeOnFail: 100,
+        });
+        
+        return logEntry.id;
+      } else {
+        // Fallback to direct database write if queue not available
+        return await this.logDirectToDatabase(logEntry);
+      }
+    } catch (queueError) {
+      // If queue fails, try direct database write
+      this.winston.warn('Queue logging failed, falling back to direct database write', {
+        queueError: queueError.message
       });
-      return null;
+      
+      try {
+        return await this.logDirectToDatabase(logEntry);
+      } catch (dbError) {
+        // Final fallback to Winston
+        this.winston.error('All logging methods failed, using Winston fallback', {
+          originalLevel: level,
+          originalMessage: message,
+          originalMetadata: metadata,
+          queueError: queueError.message,
+          dbError: dbError.message
+        });
+        return null;
+      }
     }
+  }
+
+  /**
+   * Direct database logging (fallback method)
+   */
+  async logDirectToDatabase(logEntry) {
+    await this.pool.query(`
+      INSERT INTO logs (
+        id, timestamp, level, message, log_type, instance_id, 
+        metadata, trace_id, span_id, user_id, ip_address, 
+        user_agent, request_id, session_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+    `, [
+      logEntry.id, logEntry.timestamp, logEntry.level, logEntry.message,
+      this.logType, logEntry.instanceId, logEntry.metadata,
+      logEntry.traceId, logEntry.spanId, logEntry.userId,
+      logEntry.ipAddress, logEntry.userAgent, logEntry.requestId,
+      logEntry.sessionId
+    ]);
+    
+    return logEntry.id;
   }
 
   /**

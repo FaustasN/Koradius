@@ -15,11 +15,13 @@ const redis = new Redis(redisConfig);
 const emailQueue = new Queue('email processing', { connection: redisConfig });
 const fileQueue = new Queue('file processing', { connection: redisConfig });
 const notificationQueue = new Queue('notification processing', { connection: redisConfig });
+const loggingQueue = new Queue('logging processing', { connection: redisConfig });
 
 module.exports = {
   redis,
   emailQueue,
   fileQueue,
   notificationQueue,
+  loggingQueue,
   redisConfig,
 };

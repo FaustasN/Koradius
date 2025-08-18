@@ -362,6 +362,71 @@ export const serverAPI = {
     if (!response.ok) throw new Error(`Failed to clean ${queueName} queue`);
     return response.json();
   },
+
+  // Enhanced system monitoring
+  getSystemMetrics: async () => {
+    const response = await fetch(`${API_BASE_URL}/admin/system-metrics`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to fetch system metrics');
+    return response.json();
+  },
+
+  getSystemHistory: async (points = 60) => {
+    const response = await fetch(`${API_BASE_URL}/admin/system-history?points=${points}`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to fetch system history');
+    return response.json();
+  },
+
+  getServerStatusEnhanced: async () => {
+    const response = await fetch(`${API_BASE_URL}/admin/server-status-enhanced`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to fetch enhanced server status');
+    return response.json();
+  },
+
+  // Backend health monitoring methods
+  getBackendHealth: async () => {
+    const response = await fetch(`${API_BASE_URL}/admin/backend-health`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to fetch backend health status');
+    return response.json();
+  },
+
+  forceBackendHealthCheck: async () => {
+    const response = await fetch(`${API_BASE_URL}/admin/backend-health/force-check`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to force backend health check');
+    return response.json();
+  },
+
+  getLoadBalancerHealth: async () => {
+    const response = await fetch(`${API_BASE_URL}/admin/load-balancer-health`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to fetch load balancer health');
+    return response.json();
+  },
+
+  getCompleteServerStatus: async () => {
+    const response = await fetch(`${API_BASE_URL}/admin/server-status-complete`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to fetch complete server status');
+    return response.json();
+  },
 };
 
 // Logging API

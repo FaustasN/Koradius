@@ -22,6 +22,10 @@ const queueManager = require('./queues/manager');
 const LoggingService = require('./services/logging/LoggingService');
 const LoggingMiddleware = require('./services/logging/LoggingMiddleware');
 
+// System monitoring
+const SystemMonitor = require('./services/monitoring/SystemMonitor');
+const BackendHealthMonitor = require('./services/monitoring/BackendHealthMonitor');
+
 // Email transporter configuration
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -49,8 +53,135 @@ console.log(`🔄 Initializing queue system for instance: ${INSTANCE_ID}...`);
 const { emailWorker } = require('./queues/emailQueue');
 const { fileWorker } = require('./queues/fileQueue'); 
 const { notificationWorker } = require('./queues/notificationQueue');
+const LoggingQueueWorker = require('./queues/loggingQueue');
+const { loggingQueue } = require('./queues/config');
 
-console.log(`✅ Queue workers initialized: email, file, notification`);
+console.log(`✅ Queue workers initialized: email, file, notification, logging`);
+
+// Initialize system monitoring
+console.log(`📊 Initializing system monitoring for instance: ${INSTANCE_ID}...`);
+const systemMonitor = new SystemMonitor();
+console.log(`✅ System monitoring initialized`);
+
+// Initialize backend health monitoring
+console.log(`🏥 Initializing backend health monitoring...`);
+const backendHealthMonitor = new BackendHealthMonitor();
+
+// Set up notification callbacks for backend health events
+backendHealthMonitor.setNotificationCallbacks({
+  onBackendDown: async (backend, details) => {
+    console.log('🚨 Backend down callback triggered:', backend.name);
+    const message = `Backend ${backend.name} (${backend.id}) is DOWN. Error: ${details.error}. Last seen: ${backend.lastSeen}`;
+    
+    console.error(`🚨 CRITICAL: ${message}`);
+    
+    // Log to audit trail
+    console.log('📝 Logging to audit trail...', !!loggingService);
+    if (loggingService) {
+      try {
+        await loggingService.getApplicationLogger().error('Backend health critical: Backend instance down', {
+          backendId: backend.id,
+          backendName: backend.name,
+          error: details.error,
+          consecutiveFailures: details.consecutiveFailures,
+          lastSeen: backend.lastSeen,
+          eventType: 'backend_down',
+          severity: 'critical',
+          timestamp: new Date().toISOString()
+        });
+        console.log('✅ Audit log created successfully');
+      } catch (auditError) {
+        console.error('❌ Error creating audit log:', auditError.message);
+      }
+    }
+    
+    // Create admin notification
+    console.log('🔔 Starting notification creation process...');
+    try {
+      console.log('🔔 Creating backend down notification...');
+      const result = await pool.query(
+        'INSERT INTO notifications (type, title, message, priority, created_at) VALUES ($1, $2, $3, $4, NOW())',
+        [
+          'system',
+          'Backend Server Down',
+          message,
+          'high'
+        ]
+      );
+      console.log('✅ Backend down notification created successfully:', result.rowCount);
+    } catch (error) {
+      console.error('❌ Error creating backend down notification:', error.message);
+      console.error('Full error:', error);
+    }
+    console.log('🔔 Notification creation process finished');
+  },
+  
+  onBackendRecovered: async (backend, details) => {
+    const downtime = details.downtime ? `${Math.round(details.downtime / 1000)}s` : 'unknown';
+    const message = `Backend ${backend.name} (${backend.id}) has RECOVERED after ${downtime} downtime. Response time: ${details.responseTime}ms`;
+    
+    console.log(`✅ RECOVERY: ${message}`);
+    
+    // Log to audit trail
+    if (loggingService) {
+      try {
+        await loggingService.getApplicationLogger().info('Backend health recovered: Backend instance restored', {
+          backendId: backend.id,
+          backendName: backend.name,
+          downtime: details.downtime,
+          responseTime: details.responseTime,
+          previousStatus: details.previousStatus,
+          eventType: 'backend_recovered',
+          severity: 'info',
+          timestamp: new Date().toISOString()
+        });
+      } catch (auditError) {
+        console.error('❌ Error creating recovery audit log:', auditError.message);
+      }
+    }
+    
+    // Create admin notification
+    try {
+      console.log('🔔 Creating backend recovery notification...');
+      const result = await pool.query(
+        'INSERT INTO notifications (type, title, message, priority, created_at) VALUES ($1, $2, $3, $4, NOW())',
+        [
+          'system',
+          'Backend Server Recovered',
+          message,
+          'medium'
+        ]
+      );
+      console.log('✅ Backend recovery notification created successfully:', result.rowCount);
+    } catch (error) {
+      console.error('❌ Error creating backend recovery notification:', error.message);
+      console.error('Full error:', error);
+    }
+  },
+  
+  onBackendUp: async (backend) => {
+    console.log(`🟢 Backend ${backend.name} (${backend.id}) is operational`);
+    
+    // Log initial startup
+    if (loggingService) {
+      await loggingService.logAuditEvent(
+        null,
+        'backend_started',
+        'system',
+        {
+          backendId: backend.id,
+          backendName: backend.name,
+          responseTime: backend.responseTime
+        },
+        'info'
+      );
+    }
+  }
+});
+
+// Start backend health monitoring
+backendHealthMonitor.startMonitoring();
+console.log(`✅ Backend health monitoring initialized and started`);
 
 // Environment variables for security
 const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(64).toString('hex');
@@ -279,12 +410,19 @@ const pool = new Pool({
 // Initialize logging system
 let loggingService;
 let loggingMiddleware;
+let loggingQueueWorker;
 
 // This will be initialized after database connection is established
-const initializeLogging = () => {
-  loggingService = new LoggingService(pool);
+const initializeLogging = async () => {
+  // Initialize logging queue worker first
+  loggingQueueWorker = new LoggingQueueWorker(pool);
+  await loggingQueueWorker.start();
+  
+  // Initialize logging service with queue
+  loggingService = new LoggingService(pool, loggingQueue);
   loggingMiddleware = new LoggingMiddleware(loggingService);
-  console.log('✅ Logging system initialized');
+  
+  console.log('✅ Logging system initialized with queue worker');
 };
 
 // Database schema initialization
@@ -468,23 +606,42 @@ const initializeDatabase = async () => {
   }
 };
 
-// Test database connection and initialize schema
-pool.query('SELECT NOW()', async (err, res) => {
-  if (err) {
-    console.error('❌ Database connection failed:', err.message);
-    console.log('⚠️  Server will start but database operations will fail');
-  } else {
-    console.log('✅ Database connected successfully');
-    // Initialize database schema after successful connection
+// Test database connection and initialize schema with retry logic
+const initializeDatabaseWithRetry = async (maxRetries = 10, delay = 3000) => {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
+      console.log(`🔄 Attempting database connection (${attempt}/${maxRetries})...`);
+      
+      // Test database connection
+      await pool.query('SELECT NOW()');
+      console.log('✅ Database connected successfully');
+      
+      // Initialize database schema after successful connection
       await initializeDatabase();
+      
       // Initialize logging system after database schema is ready
-      initializeLogging();
-    } catch (initError) {
-      console.error('❌ Database initialization failed:', initError.message);
+      await initializeLogging();
+      
+      console.log('✅ All systems initialized successfully');
+      return;
+      
+    } catch (error) {
+      console.error(`❌ Database connection attempt ${attempt} failed:`, error.message);
+      
+      if (attempt === maxRetries) {
+        console.error('❌ Max retries reached. Database initialization failed.');
+        console.log('⚠️  Server will start but database operations will fail');
+        return;
+      }
+      
+      console.log(`⏳ Waiting ${delay}ms before retry...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
-});
+};
+
+// Start database initialization with retry
+initializeDatabaseWithRetry();
 
 // Authentication endpoints
 app.post('/api/auth/login', loginLimiter, async (req, res) => {
@@ -1374,7 +1531,12 @@ app.get('/api/health', async (req, res) => {
     // Check queue health
     const queueHealth = await queueManager.getHealthStatus();
     
-    const isHealthy = Object.values(queueHealth).every(queue => queue.healthy);
+    // Get basic system metrics
+    const systemMetrics = systemMonitor.getCurrentMetrics();
+    const systemHealth = systemMonitor.isHealthy();
+    
+    const isHealthy = Object.values(queueHealth).every(queue => queue.healthy) && 
+                     systemHealth.healthy;
     
     res.json({ 
       status: isHealthy ? 'OK' : 'DEGRADED',
@@ -1382,7 +1544,13 @@ app.get('/api/health', async (req, res) => {
       instance: INSTANCE_ID,
       timestamp: new Date().toISOString(),
       database: 'connected',
-      queues: queueHealth
+      queues: queueHealth,
+      system: {
+        cpu: systemMetrics.cpu.usage,
+        memory: systemMetrics.memory.usagePercentage,
+        uptime: systemMetrics.uptime.process,
+        healthy: systemHealth.healthy
+      }
     });
   } catch (error) {
     res.status(503).json({ 
@@ -1450,9 +1618,14 @@ app.get('/api/admin/server-status', authenticateToken, async (req, res) => {
     const queueHealth = await queueManager.getHealthStatus();
     const queueStats = await queueManager.getQueueStats();
     
-    // Calculate system health
+    // Get backend health status
+    const backendHealth = backendHealthMonitor.getBackendStatus();
+    const backendAllHealthy = backendHealth.summary.down === 0 && backendHealth.summary.unhealthy === 0;
+    
+    // Calculate system health including backend infrastructure
     const isHealthy = dbStatus === 'connected' && 
-                     Object.values(queueHealth).every(queue => queue.healthy);
+                     Object.values(queueHealth).every(queue => queue.healthy) &&
+                     backendAllHealthy;
     
     res.json({
       status: isHealthy ? 'healthy' : 'degraded',
@@ -1488,6 +1661,250 @@ app.get('/api/admin/server-status', authenticateToken, async (req, res) => {
     console.error('Error fetching server status:', error);
     res.status(500).json({ 
       status: 'error',
+      error: error.message,
+      instance: INSTANCE_ID,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Enhanced system monitoring endpoints (protected)
+app.get('/api/admin/system-metrics', authenticateToken, async (req, res) => {
+  try {
+    const metrics = systemMonitor.getCurrentMetrics();
+    const health = systemMonitor.isHealthy();
+    const performance = systemMonitor.getPerformanceSummary();
+    const alerts = systemMonitor.getAlerts();
+
+    res.json({
+      metrics,
+      health,
+      performance,
+      alerts,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error fetching system metrics:', error);
+    res.status(500).json({ 
+      error: error.message,
+      instance: INSTANCE_ID,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+app.get('/api/admin/system-history', authenticateToken, async (req, res) => {
+  try {
+    const points = parseInt(req.query.points) || 60;
+    const history = systemMonitor.getHistory(points);
+    
+    res.json({
+      history,
+      points: history.length,
+      instance: INSTANCE_ID,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error fetching system history:', error);
+    res.status(500).json({ 
+      error: error.message,
+      instance: INSTANCE_ID,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+app.get('/api/admin/server-status-enhanced', authenticateToken, async (req, res) => {
+  try {
+    // Get database status
+    let dbStatus = 'connected';
+    try {
+      await pool.query('SELECT 1');
+    } catch (dbError) {
+      console.error('Database connection error:', dbError.message);
+      dbStatus = 'disconnected';
+    }
+    
+    // Get queue health
+    const queueHealth = await queueManager.getHealthStatus();
+    const queueStats = await queueManager.getQueueStats();
+    
+    // Get system metrics
+    const systemMetrics = systemMonitor.getCurrentMetrics();
+    const systemHealth = systemMonitor.isHealthy();
+    const performance = systemMonitor.getPerformanceSummary();
+    
+    // Get backend health status
+    const backendHealth = backendHealthMonitor.getBackendStatus();
+    const backendAllHealthy = backendHealth.summary.down === 0 && backendHealth.summary.unhealthy === 0;
+    
+    // Calculate overall system health including backend infrastructure
+    const coreSystemsHealthy = dbStatus === 'connected' && 
+                               Object.values(queueHealth).every(queue => queue.healthy) &&
+                               systemHealth.healthy;
+    
+    const allBackendsHealthy = backendHealth.summary.down === 0 && backendHealth.summary.unhealthy === 0;
+    const anyBackendsRunning = backendHealth.summary.healthy > 0;
+    const allBackendsDown = backendHealth.summary.healthy === 0;
+    
+    // Determine system status with three levels
+    let systemStatus;
+    let isHealthy;
+    
+    if (!coreSystemsHealthy || allBackendsDown) {
+      // Critical: Core systems failing or all backends down
+      systemStatus = 'critical';
+      isHealthy = false;
+    } else if (!allBackendsHealthy && anyBackendsRunning) {
+      // Warning: Some backends down but at least one healthy
+      systemStatus = 'warning';
+      isHealthy = true; // Still operational
+    } else {
+      // Healthy: All systems operational
+      systemStatus = 'healthy';
+      isHealthy = true;
+    }
+    
+    console.log('HEALTH DEBUG:', {
+      systemStatus,
+      isHealthy,
+      coreSystemsHealthy,
+      allBackendsHealthy,
+      anyBackendsRunning,
+      allBackendsDown,
+      backendSummary: backendHealth.summary
+    });
+    
+    res.json({
+      status: isHealthy ? 'healthy' : 'degraded',
+      statusDetails: {
+        database: dbStatus === 'connected',
+        queues: Object.values(queueHealth).every(queue => queue.healthy),
+        system: systemHealth.healthy,
+        backends: backendAllHealthy,
+        summary: isHealthy ? 'All systems operational' : 
+                 !backendAllHealthy ? `System degraded: ${backendHealth.summary.down} backend(s) down, ${backendHealth.summary.unhealthy} unhealthy` :
+                 dbStatus !== 'connected' ? 'System degraded: Database connection issues' :
+                 !systemHealth.healthy ? 'System degraded: Resource constraints' :
+                 'System degraded: Queue health issues'
+      },
+      backendHealth: backendHealth,
+      instance: {
+        id: INSTANCE_ID,
+        port: PORT,
+        uptime: systemMetrics.uptime.process,
+        nodeVersion: process.version,
+        environment: process.env.NODE_ENV || 'development',
+        platform: systemMetrics.processes.platform,
+        arch: systemMetrics.processes.arch,
+        pid: systemMetrics.processes.pid
+      },
+      database: {
+        status: dbStatus,
+        host: process.env.DB_HOST || 'localhost',
+        name: process.env.DB_NAME || 'koradius_db'
+      },
+      system: {
+        cpu: {
+          usage: systemMetrics.cpu.usage,
+          cores: systemMetrics.cpu.cores,
+          loadAverage: systemMetrics.cpu.loadAverage
+        },
+        memory: {
+          total: systemMetrics.memory.total,
+          used: systemMetrics.memory.used,
+          free: systemMetrics.memory.free,
+          usagePercentage: systemMetrics.memory.usagePercentage,
+          heap: systemMetrics.memory.heap
+        },
+        uptime: {
+          system: systemMetrics.uptime.system,
+          process: systemMetrics.uptime.process
+        },
+        health: {
+          healthy: isHealthy,  // Overall system health including backends
+          issues: systemStatus === 'healthy' ? [] : [
+            ...(!allBackendsHealthy ? [`${backendHealth.summary.down} backend(s) down, ${backendHealth.summary.unhealthy} unhealthy`] : []),
+            ...(dbStatus !== 'connected' ? ['Database connection issues'] : []),
+            ...(!systemHealth.healthy ? ['Resource constraints'] : []),
+            ...(!Object.values(queueHealth).every(queue => queue.healthy) ? ['Queue health issues'] : [])
+          ],
+          status: systemStatus  // Use the calculated system status (healthy/warning/critical)
+        },
+        performance: performance
+      },
+      queues: {
+        health: queueHealth,
+        stats: queueStats
+      },
+      redis: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: process.env.REDIS_PORT || 6379,
+        status: queueHealth.email?.healthy ? 'connected' : 'disconnected'
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error fetching enhanced server status:', error);
+    res.status(500).json({ 
+      status: 'error',
+      error: error.message,
+      instance: INSTANCE_ID,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Backend health monitoring endpoints (protected)
+app.get('/api/admin/backend-health', authenticateToken, async (req, res) => {
+  try {
+    const backendStatus = backendHealthMonitor.getBackendStatus();
+    
+    res.json({
+      ...backendStatus,
+      instance: INSTANCE_ID
+    });
+  } catch (error) {
+    console.error('Error fetching backend health:', error);
+    res.status(500).json({ 
+      error: error.message,
+      instance: INSTANCE_ID,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+app.get('/api/admin/backend-health/force-check', authenticateToken, async (req, res) => {
+  try {
+    const backendStatus = await backendHealthMonitor.forceCheck();
+    
+    res.json({
+      message: 'Backend health check completed',
+      ...backendStatus,
+      instance: INSTANCE_ID
+    });
+  } catch (error) {
+    console.error('Error forcing backend health check:', error);
+    res.status(500).json({ 
+      error: error.message,
+      instance: INSTANCE_ID,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+app.get('/api/admin/load-balancer-health', authenticateToken, async (req, res) => {
+  try {
+    const loadBalancerHealth = backendHealthMonitor.getLoadBalancerHealth();
+    
+    res.json({
+      ...loadBalancerHealth,
+      instance: INSTANCE_ID,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error fetching load balancer health:', error);
+    res.status(500).json({ 
       error: error.message,
       instance: INSTANCE_ID,
       timestamp: new Date().toISOString()

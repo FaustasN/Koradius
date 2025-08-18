@@ -4,8 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { LogOut, Settings, Image, MessageSquare, Clock, Plus, Edit, Trash2, Bell, Package, Database, Search, Star, Phone, Mail, Home, CheckCircle, Eye, EyeOff, ChevronUp, ChevronDown, BarChart3, Server } from 'lucide-react';
 import ImageUpload from '../components/ImageUpload';
 import GoogleAnalytics from '../components/GoogleAnalytics';
-import ServerMonitoring from '../components/ServerMonitoring';
-import { notificationsAPI, contactsAPI, reviewsAPI } from '../services/adminApiService';
+import EnhancedServerMonitoring from '../components/EnhancedServerMonitoring';
+import { notificationsAPI, contactsAPI, reviewsAPI, serverAPI } from '../services/adminApiService';
 import { galleryApi, travelPacketsApi } from '../services/apiService';
 import { useNotificationManager } from '../utils/notificationUtils';
 
@@ -96,6 +96,30 @@ interface Message {
   created_at: string;
 }
 
+interface BackendHealthStatus {
+  backends: Array<{
+    id: string;
+    name: string;
+    url: string;
+    status: 'healthy' | 'unhealthy' | 'down' | 'unknown';
+    lastCheck: string | null;
+    lastSeen: string | null;
+    responseTime: number | null;
+    consecutiveFailures: number;
+    errorMessage: string | null;
+    downtime: number | null;
+  }>;
+  summary: {
+    total: number;
+    healthy: number;
+    unhealthy: number;
+    down: number;
+    unknown: number;
+  };
+  isMonitoring: boolean;
+  lastUpdate: string;
+}
+
 const DashboardPage = () => {
   const { logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -172,6 +196,9 @@ const DashboardPage = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [hasNewNotifications, setHasNewNotifications] = useState(false);
+
+  // Backend health state
+  const [backendHealth, setBackendHealth] = useState<BackendHealthStatus | null>(null);
 
   // Item highlighting state for notification navigation
   const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
@@ -293,6 +320,9 @@ const DashboardPage = () => {
 
       // Auto-refresh current tab data every 60 seconds
       const dataRefreshInterval = setInterval(() => {
+        // Always refresh backend health for overview card
+        loadBackendHealth().catch(error => console.error('Error auto-refreshing backend health:', error));
+        
         switch (activeTab) {
           case 'gallery':
             loadGalleryItems().catch(error => console.error('Error auto-refreshing gallery:', error));
@@ -358,7 +388,8 @@ const DashboardPage = () => {
         loadTravelPackets(),
         loadNotifications(),
         loadContacts(),
-        loadReviews()
+        loadReviews(),
+        loadBackendHealth()
       ]);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -465,6 +496,28 @@ const DashboardPage = () => {
       setUnreadCount(newCount);
     } catch (error) {
       console.error('Error loading notifications:', error);
+    }
+  };
+
+  const loadBackendHealth = async () => {
+    try {
+      const data = await serverAPI.getBackendHealth();
+      setBackendHealth(data);
+    } catch (error) {
+      console.error('Error loading backend health:', error);
+      // Set a default state if the API fails
+      setBackendHealth({
+        backends: [],
+        summary: {
+          total: 0,
+          healthy: 0,
+          unhealthy: 0,
+          down: 0,
+          unknown: 0
+        },
+        isMonitoring: false,
+        lastUpdate: new Date().toISOString()
+      });
     }
   };
 
@@ -1111,7 +1164,7 @@ const DashboardPage = () => {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
             <div className="flex items-center">
               <div className="p-2 bg-blue-100 rounded-lg">
@@ -1156,6 +1209,49 @@ const DashboardPage = () => {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Duomenų bazė</p>
                 <p className="text-2xl font-bold text-gray-900">PostgreSQL</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+            <div className="flex items-center">
+              <div className={`p-2 rounded-lg ${
+                backendHealth 
+                  ? backendHealth.summary.down > 0 
+                    ? 'bg-red-100' 
+                    : backendHealth.summary.unhealthy > 0 
+                      ? 'bg-yellow-100' 
+                      : 'bg-green-100'
+                  : 'bg-gray-100'
+              }`}>
+                <Server className={`h-6 w-6 ${
+                  backendHealth 
+                    ? backendHealth.summary.down > 0 
+                      ? 'text-red-600' 
+                      : backendHealth.summary.unhealthy > 0 
+                        ? 'text-yellow-600' 
+                        : 'text-green-600'
+                    : 'text-gray-600'
+                }`} />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Backend status</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {backendHealth 
+                    ? `${backendHealth.summary.healthy}/${backendHealth.summary.total}`
+                    : '0/0'
+                  }
+                </p>
+                <p className="text-xs text-gray-500">
+                  {backendHealth 
+                    ? backendHealth.summary.down > 0 
+                      ? `${backendHealth.summary.down} down`
+                      : backendHealth.summary.unhealthy > 0 
+                        ? `${backendHealth.summary.unhealthy} unhealthy`
+                        : 'All healthy'
+                    : 'Loading...'
+                  }
+                </p>
               </div>
             </div>
           </div>
@@ -1870,7 +1966,7 @@ const DashboardPage = () => {
 
                 {/* Server Monitoring Tab */}
                 {activeTab === 'server' && (
-                  <ServerMonitoring />
+                  <EnhancedServerMonitoring />
                 )}
 
               </>
