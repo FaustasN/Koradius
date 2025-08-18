@@ -59,25 +59,52 @@ interface LoadBalancerStatus {
   timestamp: string;
 }
 
+interface BackendHealthStatus {
+  backends: Array<{
+    id: string;
+    name: string;
+    url: string;
+    status: 'healthy' | 'unhealthy' | 'down' | 'unknown';
+    lastCheck: string | null;
+    lastSeen: string | null;
+    responseTime: number | null;
+    consecutiveFailures: number;
+    errorMessage: string | null;
+    downtime: number | null;
+  }>;
+  summary: {
+    total: number;
+    healthy: number;
+    unhealthy: number;
+    down: number;
+    unknown: number;
+  };
+  isMonitoring: boolean;
+  lastUpdate: string;
+}
+
 const ServerMonitoring: React.FC = () => {
   const [serverStatus, setServerStatus] = useState<ServerStatus | null>(null);
   const [loadBalancerStatus, setLoadBalancerStatus] = useState<LoadBalancerStatus | null>(null);
+  const [backendHealth, setBackendHealth] = useState<BackendHealthStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [activeSubTab, setActiveSubTab] = useState<'server' | 'logging'>('server');
+  const [activeSubTab, setActiveSubTab] = useState<'server' | 'backends' | 'logging'>('server');
 
   const fetchServerData = async () => {
     try {
       setError(null);
-      const [serverData, lbData] = await Promise.all([
+      const [serverData, lbData, backendHealthData] = await Promise.all([
         serverAPI.getServerStatus(),
-        serverAPI.getLoadBalancerStatus()
+        serverAPI.getLoadBalancerStatus(),
+        serverAPI.getBackendHealth()
       ]);
       
       setServerStatus(serverData);
       setLoadBalancerStatus(lbData);
+      setBackendHealth(backendHealthData);
       setLastUpdated(new Date());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch server data');
@@ -146,6 +173,71 @@ const ServerMonitoring: React.FC = () => {
       return { status: 'critical', color: 'text-red-600' };
     } else {
       return { status: 'warning', color: 'text-yellow-600' };
+    }
+  };
+
+  // Force backend health check
+  const forceBackendHealthCheck = async () => {
+    try {
+      setLoading(true);
+      await serverAPI.forceBackendHealthCheck();
+      // Refresh data after forced check
+      await fetchServerData();
+    } catch (error) {
+      console.error('Error forcing backend health check:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Get backend status color and icon
+  const getBackendStatusInfo = (status: string) => {
+    switch (status) {
+      case 'healthy':
+        return { 
+          color: 'text-green-600 bg-green-50', 
+          icon: '✅', 
+          label: 'Healthy',
+          badge: 'bg-green-500'
+        };
+      case 'unhealthy':
+        return { 
+          color: 'text-yellow-600 bg-yellow-50', 
+          icon: '⚠️', 
+          label: 'Unhealthy',
+          badge: 'bg-yellow-500'
+        };
+      case 'down':
+        return { 
+          color: 'text-red-600 bg-red-50', 
+          icon: '🔴', 
+          label: 'Down',
+          badge: 'bg-red-500'
+        };
+      default:
+        return { 
+          color: 'text-gray-600 bg-gray-50', 
+          icon: '❓', 
+          label: 'Unknown',
+          badge: 'bg-gray-500'
+        };
+    }
+  };
+
+  // Format downtime duration
+  const formatDowntime = (downtime: number | null): string => {
+    if (!downtime) return 'N/A';
+    
+    const seconds = Math.floor(downtime / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes % 60}m`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds % 60}s`;
+    } else {
+      return `${seconds}s`;
     }
   };
 
@@ -253,6 +345,37 @@ const ServerMonitoring: React.FC = () => {
             onClick={() => setActiveSubTab('server')}
             className={`py-2 px-1 border-b-2 font-medium text-sm ${
               activeSubTab === 'server'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-center">
+              <Server className="w-4 h-4 mr-2" />
+              System Status
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveSubTab('backends')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeSubTab === 'backends'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-center">
+              <Network className="w-4 h-4 mr-2" />
+              Backend Health
+              {backendHealth && backendHealth.summary.down > 0 && (
+                <span className="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">
+                  {backendHealth.summary.down} down
+                </span>
+              )}
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveSubTab('logging')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeSubTab === 'logging'
                 ? 'border-blue-500 text-blue-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
@@ -565,6 +688,139 @@ const ServerMonitoring: React.FC = () => {
         )}
       </div>
       </div>
+      )}
+
+      {/* Backend Health Tab */}
+      {activeSubTab === 'backends' && (
+        <div className="space-y-6">
+          {/* Backend Health Overview */}
+          {backendHealth && (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center">
+                  <Network className="w-5 h-5 text-blue-600 mr-2" />
+                  <h3 className="text-lg font-semibold">Backend Health Overview</h3>
+                </div>
+                <button
+                  onClick={forceBackendHealthCheck}
+                  disabled={loading}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                  Force Check
+                </button>
+              </div>
+
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-center">
+                    <CheckCircle className="w-8 h-8 text-green-600" />
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-green-600">Healthy</p>
+                      <p className="text-2xl font-bold text-green-800">{backendHealth.summary.healthy}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <div className="flex items-center">
+                    <AlertCircle className="w-8 h-8 text-yellow-600" />
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-yellow-600">Unhealthy</p>
+                      <p className="text-2xl font-bold text-yellow-800">{backendHealth.summary.unhealthy}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <div className="flex items-center">
+                    <AlertCircle className="w-8 h-8 text-red-600" />
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-red-600">Down</p>
+                      <p className="text-2xl font-bold text-red-800">{backendHealth.summary.down}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center">
+                    <Activity className="w-8 h-8 text-gray-600" />
+                    <div className="ml-3">
+                      <p className="text-sm font-medium text-gray-600">Total</p>
+                      <p className="text-2xl font-bold text-gray-800">{backendHealth.summary.total}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Individual Backend Status */}
+              <div className="space-y-4">
+                <h4 className="text-md font-semibold text-gray-800 mb-4">Individual Backend Status</h4>
+                {backendHealth.backends.map((backend) => {
+                  const statusInfo = getBackendStatusInfo(backend.status);
+                  return (
+                    <div key={backend.id} className={`rounded-lg border p-4 ${statusInfo.color}`}>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center">
+                          <span className="text-lg mr-2">{statusInfo.icon}</span>
+                          <div>
+                            <h5 className="font-semibold">{backend.name}</h5>
+                            <p className="text-sm opacity-75">{backend.id}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusInfo.color}`}>
+                            {statusInfo.label}
+                          </span>
+                          <div className={`w-3 h-3 rounded-full ${statusInfo.badge}`}></div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <span className="font-medium">Response Time:</span>
+                          <p>{backend.responseTime ? `${backend.responseTime}ms` : 'N/A'}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium">Last Check:</span>
+                          <p>{backend.lastCheck ? new Date(backend.lastCheck).toLocaleTimeString() : 'Never'}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium">Failures:</span>
+                          <p>{backend.consecutiveFailures}</p>
+                        </div>
+                        <div>
+                          <span className="font-medium">Downtime:</span>
+                          <p>{formatDowntime(backend.downtime)}</p>
+                        </div>
+                      </div>
+
+                      {backend.errorMessage && (
+                        <div className="mt-3 p-2 bg-red-100 border border-red-200 rounded text-sm">
+                          <span className="font-medium text-red-800">Error:</span>
+                          <span className="text-red-700 ml-1">{backend.errorMessage}</span>
+                        </div>
+                      )}
+
+                      {backend.status === 'down' && backend.lastSeen && (
+                        <div className="mt-2 text-sm">
+                          <span className="font-medium">Last Seen:</span>
+                          <span className="ml-1">{new Date(backend.lastSeen).toLocaleString()}</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="mt-6 text-sm text-gray-500">
+                <p>Monitoring Status: {backendHealth.isMonitoring ? '✅ Active' : '❌ Inactive'}</p>
+                <p>Last Update: {new Date(backendHealth.lastUpdate).toLocaleString()}</p>
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Logging Tab */}

@@ -5,10 +5,20 @@ const AuditLogger = require('./AuditLogger');
  * Logging Factory - Creates and manages logger instances
  */
 class LoggingService {
-  constructor(pool) {
+  constructor(pool, loggingQueue = null) {
     this.pool = pool;
-    this.applicationLogger = new ApplicationLogger(pool);
-    this.auditLogger = new AuditLogger(pool);
+    this.loggingQueue = loggingQueue;
+    this.applicationLogger = new ApplicationLogger(pool, loggingQueue);
+    this.auditLogger = new AuditLogger(pool, loggingQueue);
+  }
+
+  /**
+   * Set the logging queue (called after queue initialization)
+   */
+  setLoggingQueue(loggingQueue) {
+    this.loggingQueue = loggingQueue;
+    this.applicationLogger.setLoggingQueue(loggingQueue);
+    this.auditLogger.setLoggingQueue(loggingQueue);
   }
 
   /**

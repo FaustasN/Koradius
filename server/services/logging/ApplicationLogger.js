@@ -5,8 +5,8 @@ const BaseLogger = require('./BaseLogger');
  * Handles system events, business logic, errors, performance metrics
  */
 class ApplicationLogger extends BaseLogger {
-  constructor(pool) {
-    super(pool, 'application');
+  constructor(pool, loggingQueue = null) {
+    super(pool, 'application', loggingQueue);
   }
 
   /**

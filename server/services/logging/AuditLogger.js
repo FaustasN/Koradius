@@ -5,8 +5,8 @@ const BaseLogger = require('./BaseLogger');
  * Tracks user actions, data changes, system access, and compliance events
  */
 class AuditLogger extends BaseLogger {
-  constructor(pool) {
-    super(pool, 'audit');
+  constructor(pool, loggingQueue = null) {
+    super(pool, 'audit', loggingQueue);
   }
 
   /**
