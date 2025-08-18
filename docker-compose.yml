@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16
+    container_name: koradius_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-myuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mypassword}
+      POSTGRES_DB: ${POSTGRES_DB:-mydatabase}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - koradius_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-myuser}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Backend API Server
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: koradius_backend
+    restart: always
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-mydatabase}
+      DB_USER: ${POSTGRES_USER:-myuser}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-mypassword}
+      DB_SSL: "false"
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-this-in-production}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-your-64-character-hex-encryption-key-for-sensitive-data-change-this}
+      DEFAULT_ADMIN_PASSWORD: ${DEFAULT_ADMIN_PASSWORD:-admin123}
+      # NodeMailer Configuration
+      EMAIL_USER: ${EMAIL_USER:-systemsairbag@gmail.com}
+      EMAIL_PASS: ${EMAIL_PASS:-snbh yglc chip bzqg}
+      # WebToPay Configuration
+      WEBTOPAY_PROJECT_ID: 249340
+      WEBTOPAY_PASSWORD: add08f927c0dec3bdf1f6d3af8db187e
+      WEBTOPAY_TEST_MODE: true
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - koradius_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:
+
+networks:
+  koradius_network:
+    driver: bridge
