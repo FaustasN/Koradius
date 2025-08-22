@@ -20,6 +20,7 @@ import {
   BarChart3
 } from 'lucide-react';
 import { loggingAPI } from '../services/adminApiService';
+import { useRefreshContext } from '../contexts/RefreshContext';
 
 interface LogEntry {
   id: string;
@@ -61,6 +62,7 @@ interface LogStats {
 }
 
 const LoggingComponent: React.FC = () => {
+  const { actions: refreshActions } = useRefreshContext();
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -89,9 +91,6 @@ const LoggingComponent: React.FC = () => {
   const [complianceReport, setComplianceReport] = useState<LogEntry[]>([]);
   const [selectedRegulation, setSelectedRegulation] = useState('');
 
-  const [autoRefresh, setAutoRefresh] = useState(false);
-  const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null);
-
   // Load logs on component mount and filter changes
   useEffect(() => {
     if (activeSubTab === 'logs') {
@@ -101,17 +100,19 @@ const LoggingComponent: React.FC = () => {
     }
   }, [activeSubTab, filters]);
 
-  // Auto-refresh functionality
+  // Subscribe to centralized refresh system
   useEffect(() => {
-    if (autoRefresh && activeSubTab === 'logs') {
-      const interval = setInterval(loadLogs, 30000); // Refresh every 30 seconds
-      setRefreshInterval(interval);
-      return () => clearInterval(interval);
-    } else if (refreshInterval) {
-      clearInterval(refreshInterval);
-      setRefreshInterval(null);
-    }
-  }, [autoRefresh, activeSubTab]);
+    // Subscribe to refresh events
+    const unsubscribe = refreshActions.onRefresh('logging', () => {
+      if (activeSubTab === 'logs') {
+        loadLogs();
+      } else if (activeSubTab === 'stats') {
+        loadStats();
+      }
+    });
+    
+    return unsubscribe;
+  }, []); // Empty dependency array to avoid re-subscribing
 
   const loadLogs = async () => {
     try {
@@ -324,20 +325,6 @@ const LoggingComponent: React.FC = () => {
             <FileText className="w-6 h-6 text-blue-600" />
             <h2 className="text-2xl font-bold text-gray-900">System Logging</h2>
           </div>
-          
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => setAutoRefresh(!autoRefresh)}
-              className={`flex items-center space-x-1 px-3 py-1 rounded-lg text-sm ${
-                autoRefresh 
-                  ? 'bg-green-100 text-green-700' 
-                  : 'bg-gray-100 text-gray-700'
-              }`}
-            >
-              <RefreshCw className={`w-4 h-4 ${autoRefresh ? 'animate-spin' : ''}`} />
-              <span>{autoRefresh ? 'Auto' : 'Manual'}</span>
-            </button>
-          </div>
         </div>
 
         <div className="flex items-center space-x-2">
@@ -494,13 +481,6 @@ const LoggingComponent: React.FC = () => {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-gray-600">{logs.length} log entries found</p>
-                <button
-                  onClick={loadLogs}
-                  className="flex items-center space-x-1 text-blue-600 hover:text-blue-700"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  <span>Refresh</span>
-                </button>
               </div>
               
               {logs.map((log) => (
