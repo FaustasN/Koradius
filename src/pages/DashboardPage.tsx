@@ -127,7 +127,7 @@ const DashboardPage = () => {
   const notificationManager = useNotificationManager();
   const [userInfo, setUserInfo] = useState<{ username: string; role: string; exp: number } | null>(null);
   const [timeUntilExpiry, setTimeUntilExpiry] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'gallery' | 'packets' | 'zinutes' | 'atsiliepimai' | 'notifications' | 'analytics' | 'server' | 'logs'>('gallery');
+  const [activeTab, setActiveTab] = useState<'gallery' | 'packets' | 'zinutes' | 'atsiliepimai' | 'notifications' | 'analytics' | 'server'>('gallery');
   const [isLoading, setIsLoading] = useState(false);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
 
@@ -1452,19 +1452,6 @@ const DashboardPage = () => {
               <div className="flex items-center justify-center space-x-2">
                 <Server className="h-5 w-5" />
                 <span>Server</span>
-              </div>
-            </button>
-            <button
-              onClick={() => setActiveTab('logs')}
-              className={`flex-1 px-6 py-4 text-sm font-medium transition-colors duration-200 ${
-                activeTab === 'logs'
-                  ? 'text-orange-600 border-b-2 border-orange-600 bg-orange-50'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              <div className="flex items-center justify-center space-x-2">
-                <FileText className="h-5 w-5" />
-                <span>Logs</span>
               </div>
             </button>
           </div>
