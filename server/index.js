@@ -53,9 +53,12 @@ const { emailWorker } = require('./queues/emailQueue');
 const { fileWorker } = require('./queues/fileQueue'); 
 const { notificationWorker } = require('./queues/notificationQueue');
 const LoggingQueueWorker = require('./queues/loggingQueue');
+const { databaseWorker, queueDatabaseOperation } = require('./queues/databaseQueue');
+const { analyticsWorker, queueAnalyticsOperation } = require('./queues/analyticsQueue');
+const { monitoringWorker, queueMonitoringOperation } = require('./queues/monitoringQueue');
 const { loggingQueue } = require('./queues/config');
 
-console.log(`✅ Queue workers initialized: email, file, notification, logging`);
+console.log(`✅ Queue workers initialized: email, file, notification, logging, database, analytics, monitoring`);
 
 // Initialize system monitoring
 console.log(`📊 Initializing system monitoring for instance: ${INSTANCE_ID}...`);
@@ -163,7 +166,8 @@ backendHealthMonitor.setNotificationCallbacks({
     
     // Log initial startup
     if (loggingService) {
-      await loggingService.logAuditEvent(
+      const auditLogger = loggingService.getAuditLogger();
+      await auditLogger.logAdminOperation(
         null,
         'backend_started',
         'system',
@@ -171,8 +175,7 @@ backendHealthMonitor.setNotificationCallbacks({
           backendId: backend.id,
           backendName: backend.name,
           responseTime: backend.responseTime
-        },
-        'info'
+        }
       );
     }
   }
@@ -421,6 +424,66 @@ const initializeLogging = async () => {
   console.log('✅ Logging system initialized with queue worker');
 };
 
+// Initialize scheduled jobs for maintenance and monitoring
+const initializeScheduledJobs = async () => {
+  console.log('🔄 Scheduled jobs disabled for now - use manual endpoints instead');
+  console.log('✅ Manual queue operations available at /api/admin/database/, /api/admin/analytics/, /api/admin/monitoring/');
+  return;
+  
+  // TODO: Fix circular reference issue in queue serialization
+  console.log('🔄 Setting up scheduled jobs...');
+  
+  try {
+    console.log('Scheduling simple database maintenance job...');
+    // Schedule daily database maintenance at 2 AM (simple test)
+    const job = await queueDatabaseOperation('cleanup-logs', { 
+      retentionDays: 30 
+    }, { 
+      delay: 60000, // 1 minute from now for testing
+      priority: 'low' 
+    });
+    
+    console.log('Database maintenance job scheduled with ID:', job.id);
+    console.log('✅ Scheduled jobs initialized successfully');
+    
+  } catch (error) {
+    console.error('❌ Failed to initialize scheduled jobs:', error.message);
+    console.error('Error details:', error);
+  }
+};
+
+// Helper function to calculate delay to specific time today
+function getDelayToTime(hour, minute) {
+  const now = new Date();
+  const target = new Date();
+  target.setHours(hour, minute, 0, 0);
+  
+  // If target time has passed today, schedule for tomorrow
+  if (target <= now) {
+    target.setDate(target.getDate() + 1);
+  }
+  
+  return target.getTime() - now.getTime();
+}
+
+// Helper function to calculate delay to specific weekly time
+function getDelayToWeeklyTime(dayOfWeek, hour, minute) {
+  const now = new Date();
+  const target = new Date();
+  
+  // Set to target day of week (0 = Sunday, 1 = Monday, etc.)
+  const daysUntilTarget = (dayOfWeek - now.getDay() + 7) % 7;
+  target.setDate(now.getDate() + daysUntilTarget);
+  target.setHours(hour, minute, 0, 0);
+  
+  // If target time has passed this week, schedule for next week
+  if (target <= now) {
+    target.setDate(target.getDate() + 7);
+  }
+  
+  return target.getTime() - now.getTime();
+}
+
 // Database schema initialization
 const initializeDatabase = async () => {
   try {
@@ -617,6 +680,9 @@ const initializeDatabaseWithRetry = async (maxRetries = 10, delay = 3000) => {
       
       // Initialize logging system after database schema is ready
       await initializeLogging();
+      
+      // Initialize scheduled jobs for maintenance and monitoring
+      await initializeScheduledJobs();
       
       console.log('✅ All systems initialized successfully');
       return;
@@ -1491,6 +1557,128 @@ app.post('/api/admin/queue/:queueName/clean', authenticateToken, async (req, res
   }
 });
 
+// New queue operation endpoints
+
+// Manual database maintenance endpoint
+app.post('/api/admin/database/:operation', authenticateToken, async (req, res) => {
+  try {
+    const { operation } = req.params;
+    const { retentionDays, tables } = req.body;
+    
+    const validOperations = [
+      'cleanup-logs', 'cleanup-sessions', 'analyze-tables', 
+      'reindex-tables', 'backup-critical-data', 'archive-old-data', 
+      'update-stats'
+    ];
+    
+    if (!validOperations.includes(operation)) {
+      return res.status(400).json({ 
+        error: 'Invalid operation', 
+        validOperations 
+      });
+    }
+    
+    const jobData = {};
+    if (retentionDays) jobData.retentionDays = retentionDays;
+    if (tables) jobData.tables = tables;
+    
+    const job = await queueDatabaseOperation(operation, jobData, { priority: 'medium' });
+    
+    res.json({ 
+      success: true, 
+      message: `Database ${operation} operation queued`,
+      jobId: job.id 
+    });
+  } catch (error) {
+    console.error('Database operation error:', error.message);
+    res.status(500).json({ error: 'Failed to queue database operation' });
+  }
+});
+
+// TEST ENDPOINT - minimal database operation
+app.post('/api/admin/test-database', authenticateToken, async (req, res) => {
+  try {
+    console.log('Testing minimal database queue operation...');
+    const job = await queueDatabaseOperation('cleanup-logs', { retentionDays: 30 }, { priority: 'low' });
+    res.json({ success: true, jobId: job.id });
+  } catch (error) {
+    console.error('Test database error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Manual analytics generation endpoint
+app.post('/api/admin/analytics/:operation', authenticateToken, async (req, res) => {
+  try {
+    const { operation } = req.params;
+    const { timeframe = 'weekly' } = req.body;
+    
+    const validOperations = [
+      'contact-analytics', 'review-analytics', 'upload-analytics',
+      'performance-metrics', 'user-engagement', 'system-health-report',
+      'security-audit'
+    ];
+    
+    if (!validOperations.includes(operation)) {
+      return res.status(400).json({ 
+        error: 'Invalid operation', 
+        validOperations 
+      });
+    }
+    
+    const job = await queueAnalyticsOperation(operation, {}, timeframe, { priority: 'medium' });
+    
+    res.json({ 
+      success: true, 
+      message: `Analytics ${operation} queued for ${timeframe} timeframe`,
+      jobId: job.id 
+    });
+  } catch (error) {
+    console.error('Analytics operation error:', error.message);
+    res.status(500).json({ error: 'Failed to queue analytics operation' });
+  }
+});
+
+// Manual monitoring check endpoint
+app.post('/api/admin/monitoring/:operation', authenticateToken, async (req, res) => {
+  try {
+    const { operation } = req.params;
+    const { thresholds = {} } = req.body;
+    
+    const validOperations = [
+      'health-check', 'resource-monitoring', 'database-monitoring',
+      'queue-monitoring', 'error-detection', 'performance-monitoring',
+      'disk-usage-check', 'memory-pressure-check'
+    ];
+    
+    if (!validOperations.includes(operation)) {
+      return res.status(400).json({ 
+        error: 'Invalid operation', 
+        validOperations 
+      });
+    }
+    
+    const jobData = {
+      // Only pass simple data, not complex objects with circular references
+      instanceId: INSTANCE_ID
+    };
+    // The worker will access systemMonitor, backendHealthMonitor, pool, queueManager directly
+    // since they're not JSON serializable due to circular references
+    
+    const job = await queueMonitoringOperation(operation, jobData, thresholds, { priority: 'high' });
+    
+    res.json({ 
+      success: true, 
+      message: `Monitoring ${operation} queued`,
+      jobId: job.id 
+    });
+  } catch (error) {
+    console.error('Error queuing monitoring operation:', error.message);
+    console.error('Operation type:', typeof operation !== 'undefined' ? operation : 'undefined');
+    res.status(500).json({ error: 'Failed to queue monitoring operation', details: error.message });
+  }
+});
+
 // Health check endpoint
 app.get('/api/health', async (req, res) => {
   try {
@@ -1546,7 +1734,11 @@ app.get('/api/admin/queue-stats', authenticateToken, async (req, res) => {
       workers: {
         email: emailWorker.isRunning(),
         file: fileWorker.isRunning(),
-        notification: notificationWorker.isRunning()
+        notification: notificationWorker.isRunning(),
+        logging: LoggingQueueWorker.isRunning(),
+        database: databaseWorker.isRunning(),
+        analytics: analyticsWorker.isRunning(),
+        monitoring: monitoringWorker.isRunning()
       }
     });
   } catch (error) {
