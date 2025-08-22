@@ -1,4 +1,4 @@
-const { emailQueue, fileQueue, notificationQueue, loggingQueue } = require('./config');
+const { emailQueue, fileQueue, notificationQueue, loggingQueue, databaseQueue, analyticsQueue, monitoringQueue } = require('./config');
 
 class QueueManager {
   constructor() {
@@ -7,6 +7,9 @@ class QueueManager {
       file: fileQueue,
       notification: notificationQueue,
       logging: loggingQueue,
+      database: databaseQueue,
+      analytics: analyticsQueue,
+      monitoring: monitoringQueue,
     };
   }
 
