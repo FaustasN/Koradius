@@ -1479,15 +1479,32 @@ app.get('/api/reviews/approved', async (req, res) => {
 // Notifications endpoints (Protected)
 app.get('/api/notifications', authenticateToken, async (req, res) => {
   try {
+    const { sortBy = 'priority' } = req.query;
+    
+    let orderClause;
+    switch (sortBy) {
+      case 'date':
+        orderClause = 'n.timestamp DESC';
+        break;
+      case 'type':
+        orderClause = 'n.type ASC, n.timestamp DESC';
+        break;
+      case 'priority':
+      default:
+        orderClause = `
+          CASE WHEN n.priority = 'high' THEN 1 
+               WHEN n.priority = 'medium' THEN 2 
+               ELSE 3 END,
+          n.timestamp DESC
+        `;
+        break;
+    }
+    
     const result = await pool.query(`
       SELECT n.*, a.username as read_by_username 
       FROM notifications n 
       LEFT JOIN admins a ON n.read_by = a.id 
-      ORDER BY 
-        CASE WHEN n.priority = 'high' THEN 1 
-             WHEN n.priority = 'medium' THEN 2 
-             ELSE 3 END,
-        n.timestamp DESC
+      ORDER BY ${orderClause}
     `);
     res.json(result.rows);
   } catch (error) {
