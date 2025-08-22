@@ -1,6 +1,7 @@
 const { Worker } = require('bullmq');
 const { databaseQueue, redisConfig } = require('./config');
 const { Pool } = require('pg');
+const { v4: uuidv4 } = require('uuid');
 
 // Simple database utility for queue workers
 const createDbConnection = () => {
@@ -52,23 +53,115 @@ const databaseWorker = new Worker('database processing', async (job) => {
 
 // Database operations
 async function cleanupOldLogs(data) {
-  const { retentionDays = 30 } = data;
-  const cutoffDate = new Date();
-  cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
-  
   const pool = createDbConnection();
+  let totalDeletedRows = 0;
+  const results = [];
+  const startTime = new Date();
+  
   try {
-    const result = await pool.query(
-      'DELETE FROM logs WHERE created_at < $1 AND log_type = $2',
-      [cutoffDate, 'application']
+    // Normal logs (info, debug): Delete after 1 day
+    const normalLogsCutoff = new Date();
+    normalLogsCutoff.setDate(normalLogsCutoff.getDate() - 1);
+    
+    const normalLogsResult = await pool.query(
+      `DELETE FROM logs 
+       WHERE timestamp < $1 
+       AND log_type = 'application' 
+       AND level IN ('info', 'debug')`,
+      [normalLogsCutoff]
     );
+    
+    totalDeletedRows += normalLogsResult.rowCount;
+    results.push({
+      type: 'normal_logs',
+      deletedRows: normalLogsResult.rowCount,
+      cutoffDate: normalLogsCutoff.toISOString(),
+      retentionDays: 1
+    });
+
+    // Warning and Error logs: Delete after 1 week (7 days)
+    const warningErrorCutoff = new Date();
+    warningErrorCutoff.setDate(warningErrorCutoff.getDate() - 7);
+    
+    const warningErrorResult = await pool.query(
+      `DELETE FROM logs 
+       WHERE timestamp < $1 
+       AND log_type = 'application' 
+       AND level IN ('warn', 'error')`,
+      [warningErrorCutoff]
+    );
+    
+    totalDeletedRows += warningErrorResult.rowCount;
+    results.push({
+      type: 'warning_error_logs',
+      deletedRows: warningErrorResult.rowCount,
+      cutoffDate: warningErrorCutoff.toISOString(),
+      retentionDays: 7
+    });
+
+    // Audit logs: Delete after 1 month (30 days)
+    const auditLogsCutoff = new Date();
+    auditLogsCutoff.setDate(auditLogsCutoff.getDate() - 30);
+    
+    const auditLogsResult = await pool.query(
+      `DELETE FROM logs 
+       WHERE timestamp < $1 
+       AND log_type = 'audit'`,
+      [auditLogsCutoff]
+    );
+    
+    totalDeletedRows += auditLogsResult.rowCount;
+    results.push({
+      type: 'audit_logs',
+      deletedRows: auditLogsResult.rowCount,
+      cutoffDate: auditLogsCutoff.toISOString(),
+      retentionDays: 30
+    });
+
+    const completedAt = new Date();
+    const duration = completedAt.getTime() - startTime.getTime();
+
+    // Create an audit log entry for the completed cleanup operation
+    try {
+      await pool.query(
+        `INSERT INTO logs (id, timestamp, level, message, log_type, instance_id, metadata) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [
+          uuidv4(),
+          completedAt,
+          'info',
+          'Automated log cleanup completed',
+          'audit',
+          process.env.INSTANCE_ID || 'server-main',
+          JSON.stringify({
+            operation: 'log_cleanup_completed',
+            actionType: 'system_maintenance',
+            sensitivity: 'medium',
+            totalDeletedRows,
+            duration: `${duration}ms`,
+            details: results,
+            startTime: startTime.toISOString(),
+            completedAt: completedAt.toISOString(),
+            retentionPolicy: {
+              normal_logs: '1 day',
+              warning_error_logs: '7 days',
+              audit_logs: '30 days'
+            }
+          })
+        ]
+      );
+    } catch (auditError) {
+      console.error('Failed to create audit log for cleanup operation:', auditError.message);
+      // Don't fail the entire operation if audit logging fails
+    }
     
     return {
       success: true,
       operation: 'cleanup-logs',
-      deletedRows: result.rowCount,
-      cutoffDate: cutoffDate.toISOString(),
-      retentionDays
+      totalDeletedRows,
+      details: results,
+      duration: `${duration}ms`,
+      completedAt: completedAt.toISOString()
     };
   } finally {
     await pool.end();

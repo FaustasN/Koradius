@@ -425,26 +425,24 @@ const initializeLogging = async () => {
 };
 
 // Initialize scheduled jobs for maintenance and monitoring
+const LogCleanupScheduler = require('./services/logCleanupScheduler');
+let logCleanupScheduler = null;
+
 const initializeScheduledJobs = async () => {
-  console.log('🔄 Scheduled jobs disabled for now - use manual endpoints instead');
-  console.log('✅ Manual queue operations available at /api/admin/database/, /api/admin/analytics/, /api/admin/monitoring/');
-  return;
-  
-  // TODO: Fix circular reference issue in queue serialization
-  console.log('🔄 Setting up scheduled jobs...');
+  console.log('🔄 Initializing automated maintenance jobs...');
   
   try {
-    console.log('Scheduling simple database maintenance job...');
-    // Schedule daily database maintenance at 2 AM (simple test)
-    const job = await queueDatabaseOperation('cleanup-logs', { 
-      retentionDays: 30 
-    }, { 
-      delay: 60000, // 1 minute from now for testing
-      priority: 'low' 
-    });
+    // Initialize log cleanup scheduler with the queue function
+    logCleanupScheduler = new LogCleanupScheduler(queueDatabaseOperation);
     
-    console.log('Database maintenance job scheduled with ID:', job.id);
-    console.log('✅ Scheduled jobs initialized successfully');
+    // Set the logging service if available
+    if (loggingService) {
+      logCleanupScheduler.setLoggingService(loggingService);
+    }
+    
+    logCleanupScheduler.start();
+    
+    console.log('✅ Automated maintenance jobs initialized successfully');
     
   } catch (error) {
     console.error('❌ Failed to initialize scheduled jobs:', error.message);
@@ -2264,6 +2262,141 @@ app.delete('/api/admin/logs/cleanup', authenticateToken, async (req, res) => {
   }
 });
 
+// Log cleanup scheduler management endpoints
+app.get('/api/admin/logs/scheduler/status', authenticateToken, async (req, res) => {
+  try {
+    if (!logCleanupScheduler) {
+      return res.json({
+        success: false,
+        message: 'Log cleanup scheduler not initialized'
+      });
+    }
+
+    const status = logCleanupScheduler.getStatus();
+    res.json({
+      success: true,
+      scheduler: status
+    });
+    
+  } catch (error) {
+    console.error('Failed to get scheduler status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get scheduler status',
+      error: error.message
+    });
+  }
+});
+
+app.post('/api/admin/logs/scheduler/start', authenticateToken, async (req, res) => {
+  try {
+    if (!logCleanupScheduler) {
+      return res.status(400).json({
+        success: false,
+        message: 'Log cleanup scheduler not initialized'
+      });
+    }
+
+    logCleanupScheduler.start();
+    res.json({
+      success: true,
+      message: 'Log cleanup scheduler started'
+    });
+    
+  } catch (error) {
+    console.error('Failed to start scheduler:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to start scheduler',
+      error: error.message
+    });
+  }
+});
+
+app.post('/api/admin/logs/scheduler/stop', authenticateToken, async (req, res) => {
+  try {
+    if (!logCleanupScheduler) {
+      return res.status(400).json({
+        success: false,
+        message: 'Log cleanup scheduler not initialized'
+      });
+    }
+
+    logCleanupScheduler.stop();
+    res.json({
+      success: true,
+      message: 'Log cleanup scheduler stopped'
+    });
+    
+  } catch (error) {
+    console.error('Failed to stop scheduler:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to stop scheduler',
+      error: error.message
+    });
+  }
+});
+
+app.post('/api/admin/logs/scheduler/cleanup-now', authenticateToken, async (req, res) => {
+  try {
+    if (!logCleanupScheduler) {
+      return res.status(400).json({
+        success: false,
+        message: 'Log cleanup scheduler not initialized'
+      });
+    }
+
+    await logCleanupScheduler.runCleanupNow();
+    res.json({
+      success: true,
+      message: 'Manual log cleanup initiated'
+    });
+    
+  } catch (error) {
+    console.error('Failed to run manual cleanup:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to run manual cleanup',
+      error: error.message
+    });
+  }
+});
+
+app.put('/api/admin/logs/scheduler/time', authenticateToken, async (req, res) => {
+  try {
+    const { hour, minute } = req.body;
+    
+    if (!logCleanupScheduler) {
+      return res.status(400).json({
+        success: false,
+        message: 'Log cleanup scheduler not initialized'
+      });
+    }
+
+    if (typeof hour !== 'number' || typeof minute !== 'number') {
+      return res.status(400).json({
+        success: false,
+        message: 'Hour and minute must be numbers'
+      });
+    }
+
+    logCleanupScheduler.setCleanupTime(hour, minute);
+    res.json({
+      success: true,
+      message: `Log cleanup time updated to ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
+    });
+    
+  } catch (error) {
+    console.error('Failed to update cleanup time:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update cleanup time',
+      error: error.message
+    });
+  }
+});
+
 // Add error logging middleware at the end
 app.use((error, req, res, next) => {
   if (loggingMiddleware) {
@@ -2284,6 +2417,11 @@ process.on('SIGINT', async () => {
   console.log('Shutting down server...');
   
   try {
+    // Stop log cleanup scheduler
+    if (logCleanupScheduler && logCleanupScheduler.isRunning) {
+      logCleanupScheduler.stop();
+    }
+    
     // Close queue connections
     await queueManager.shutdown();
     

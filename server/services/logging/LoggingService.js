@@ -267,7 +267,7 @@ class LoggingService {
   }
 
   /**
-   * Clean old logs (data retention)
+   * Clean old logs (data retention) - DEPRECATED, use new scheduled cleanup
    */
   async cleanOldLogs(retentionDays = 30) {
     try {
