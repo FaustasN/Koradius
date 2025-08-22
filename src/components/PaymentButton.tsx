@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+
 // Simple Credit Card Icon component
 const CreditCardIcon = ({ className }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -12,9 +14,15 @@ interface PaymentButtonProps {
   currency?: string;
   orderId: string;
   description?: string;
+  customerEmail: string;
+  customerName: string;
+  customerPhone?: string;
+  productInfo?: any;
   className?: string;
   size?: 'sm' | 'md' | 'lg';
   variant?: 'primary' | 'secondary' | 'outline';
+  onPaymentCreated?: (paymentUrl: string) => void;
+  onError?: (error: string) => void;
 }
 
 const PaymentButton: React.FC<PaymentButtonProps> = ({
@@ -22,11 +30,16 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
   currency = 'EUR',
   orderId,
   description = '',
+  customerEmail,
+  customerName,
+  customerPhone,
+  productInfo,
   className = '',
   size = 'md',
-  variant = 'primary'
+  variant = 'primary',
+  onPaymentCreated,
+  onError
 }) => {
-  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
 
   const sizeClasses = {
@@ -41,23 +54,59 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
     outline: 'bg-transparent border-2 border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white'
   };
 
-  const handlePayment = () => {
+  const handlePayment = async () => {
+    if (!customerEmail || !customerName) {
+      const error = 'Customer email and name are required for payment';
+      onError?.(error);
+      alert(error);
+      return;
+    }
+
     setIsLoading(true);
     
-    // Navigate to payment page with parameters
-    const params = new URLSearchParams({
-      amount: amount.toString(),
-      orderId,
-      description: encodeURIComponent(description)
-    });
-    
-    navigate(`/payment?${params.toString()}`);
+    try {
+      const response = await fetch(`${API_BASE_URL}/payment/create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount,
+          currency,
+          orderId,
+          description: description || `Order ${orderId}`,
+          customerEmail,
+          customerName,
+          customerPhone,
+          productInfo
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.paymentUrl) {
+        onPaymentCreated?.(data.paymentUrl);
+        // Redirect to payment gateway
+        window.location.href = data.paymentUrl;
+      } else {
+        const error = data.message || 'Failed to create payment';
+        onError?.(error);
+        alert(`Payment creation failed: ${error}`);
+      }
+    } catch (error) {
+      const errorMessage = 'Failed to connect to payment service';
+      onError?.(errorMessage);
+      console.error('Payment creation error:', error);
+      alert(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <button
       onClick={handlePayment}
-      disabled={isLoading}
+      disabled={isLoading || !customerEmail || !customerName}
       className={`
         inline-flex items-center justify-center font-medium rounded-md transition-all duration-200
         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2

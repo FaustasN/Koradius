@@ -19,6 +19,7 @@ const loggingQueue = new Queue('logging processing', { connection: redisConfig }
 const databaseQueue = new Queue('database processing', { connection: redisConfig });
 const analyticsQueue = new Queue('analytics processing', { connection: redisConfig });
 const monitoringQueue = new Queue('monitoring processing', { connection: redisConfig });
+const paymentQueue = new Queue('payment processing', { connection: redisConfig });
 
 module.exports = {
   redis,
@@ -29,5 +30,6 @@ module.exports = {
   databaseQueue,
   analyticsQueue,
   monitoringQueue,
+  paymentQueue,
   redisConfig,
 };

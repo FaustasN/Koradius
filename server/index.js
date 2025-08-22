@@ -11,6 +11,7 @@ const rateLimit = require('express-rate-limit');
 const nodemailer = require('nodemailer');
 const axios = require('axios');
 const paymentRoutes = require('./paymentRoutes');
+const adminPaymentRoutes = require('./adminPaymentRoutes');
 
 // Initialize queue system
 const { queueEmail, emailQueue } = require('./queues/emailQueue');
@@ -57,9 +58,10 @@ const LoggingQueueWorker = require('./queues/loggingQueue');
 const { databaseWorker, queueDatabaseOperation } = require('./queues/databaseQueue');
 const { analyticsWorker, queueAnalyticsOperation } = require('./queues/analyticsQueue');
 const { monitoringWorker, queueMonitoringOperation } = require('./queues/monitoringQueue');
+const { paymentWorker, queuePaymentOperation } = require('./queues/paymentQueue');
 const { loggingQueue } = require('./queues/config');
 
-console.log(`✅ Queue workers initialized: email, file, notification, logging, database, analytics, monitoring`);
+console.log(`✅ Queue workers initialized: email, file, notification, logging, database, analytics, monitoring, payment`);
 
 // Initialize system monitoring
 console.log(`📊 Initializing system monitoring for instance: ${INSTANCE_ID}...`);
@@ -305,6 +307,9 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Payment routes
 app.use('/api/payment', paymentRoutes);
+
+// Admin payment routes (protected)
+app.use('/api/admin/payments', authenticateToken, adminPaymentRoutes);
 
 // Add logging middleware after basic setup
 app.use((req, res, next) => {
@@ -623,6 +628,83 @@ const initializeDatabase = async () => {
       )
     `);
 
+    // Create payments table for secure payment data storage
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS payments (
+        id SERIAL PRIMARY KEY,
+        order_id VARCHAR(255) UNIQUE NOT NULL,
+        amount DECIMAL(15,2) NOT NULL,
+        currency VARCHAR(3) NOT NULL DEFAULT 'EUR',
+        description TEXT,
+        customer_email_encrypted TEXT NOT NULL,
+        customer_name_encrypted TEXT NOT NULL,
+        customer_phone_encrypted TEXT,
+        ip_address INET,
+        user_agent TEXT,
+        session_id VARCHAR(255),
+        product_info_encrypted TEXT,
+        status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed', 'cancelled', 'refunded')),
+        payment_method VARCHAR(100),
+        transaction_id VARCHAR(255),
+        gateway_response_encrypted TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        paid_at TIMESTAMP
+      )
+    `);
+
+    // Create payment history table for audit trail
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS payment_history (
+        id SERIAL PRIMARY KEY,
+        payment_id INTEGER NOT NULL REFERENCES payments(id) ON DELETE CASCADE,
+        status VARCHAR(50) NOT NULL,
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Create payment refunds table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS payment_refunds (
+        id SERIAL PRIMARY KEY,
+        payment_id INTEGER NOT NULL REFERENCES payments(id) ON DELETE CASCADE,
+        refund_amount DECIMAL(15,2) NOT NULL,
+        reason_encrypted TEXT NOT NULL,
+        processed_by INTEGER REFERENCES admins(id),
+        status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
+        refund_transaction_id VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        processed_at TIMESTAMP
+      )
+    `);
+
+    // Create payments archive table for old completed payments
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS payments_archive (
+        id INTEGER,
+        order_id VARCHAR(255),
+        amount DECIMAL(15,2),
+        currency VARCHAR(3),
+        description TEXT,
+        customer_email_encrypted TEXT,
+        customer_name_encrypted TEXT,
+        customer_phone_encrypted TEXT,
+        ip_address INET,
+        user_agent TEXT,
+        session_id VARCHAR(255),
+        product_info_encrypted TEXT,
+        status VARCHAR(50),
+        payment_method VARCHAR(100),
+        transaction_id VARCHAR(255),
+        gateway_response_encrypted TEXT,
+        created_at TIMESTAMP,
+        updated_at TIMESTAMP,
+        paid_at TIMESTAMP,
+        archived_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     // Create indexes for better performance
     await pool.query('CREATE INDEX IF NOT EXISTS idx_gallery_category ON gallery(category)');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_gallery_active ON gallery(is_active)');
@@ -645,6 +727,21 @@ const initializeDatabase = async () => {
     await pool.query('CREATE INDEX IF NOT EXISTS idx_logs_request ON logs(request_id)');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_logs_compound ON logs(log_type, level, timestamp)');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_logs_metadata ON logs USING GIN(metadata)');
+
+    // Create indexes for payment tables
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_payments_order_id ON payments(order_id)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_payments_created_at ON payments(created_at)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_payments_paid_at ON payments(paid_at)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_payments_transaction_id ON payments(transaction_id)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_payments_session_id ON payments(session_id)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_payments_compound ON payments(status, created_at)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_payment_history_payment_id ON payment_history(payment_id)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_payment_history_created_at ON payment_history(created_at)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_payment_refunds_payment_id ON payment_refunds(payment_id)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_payment_refunds_status ON payment_refunds(status)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_payments_archive_created_at ON payments_archive(created_at)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_payments_archive_archived_at ON payments_archive(archived_at)');
 
     // Create default admin if none exists
     const adminExists = await pool.query('SELECT COUNT(*) FROM admins');

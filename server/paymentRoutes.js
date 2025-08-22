@@ -1,6 +1,12 @@
 const express = require('express');
 const WebToPay = require('./webtopay');
+const { queuePaymentOperation } = require('./queues/paymentQueue');
+const { QueueEvents } = require('bullmq');
+const { redisConfig } = require('./queues/config');
 const router = express.Router();
+
+// Initialize queue events for waiting on job completion
+const queueEvents = new QueueEvents('payment processing', { connection: redisConfig });
 
 // WebToPay configuration
 const WEBTOPAY_CONFIG = {
@@ -15,18 +21,33 @@ const WEBTOPAY_CONFIG = {
  */
 router.post('/create', async (req, res) => {
     try {
-        const { amount, currency, orderId, description, customerEmail, customerName } = req.body;
+        const { amount, currency, orderId, description, customerEmail, customerName, customerPhone, productInfo } = req.body;
 
         // Validate required fields
-        if (!amount || !currency || !orderId) {
+        if (!amount || !currency || !orderId || !customerEmail || !customerName) {
             return res.status(400).json({
                 success: false,
-                message: 'Amount, currency, and orderId are required'
+                message: 'Amount, currency, orderId, customerEmail, and customerName are required'
             });
         }
 
         // Get base URL for callbacks
-        const baseUrl = `${req.protocol}://${req.get('host')}`;
+        const baseUrl = process.env.BACKEND_URL || `${req.protocol}://${req.get('host')}`;
+
+        // Queue payment record creation
+        await queuePaymentOperation('create-payment', {
+            orderId,
+            amount: parseFloat(amount),
+            currency: currency.toUpperCase(),
+            description: description || `Order ${orderId}`,
+            customerEmail,
+            customerName,
+            customerPhone,
+            ipAddress: req.ip,
+            userAgent: req.get('User-Agent'),
+            sessionId: req.sessionID,
+            productInfo
+        });
 
         // Build payment request data
         const paymentData = {
@@ -69,62 +90,156 @@ router.post('/create', async (req, res) => {
 });
 
 /**
- * GET /api/payment/accept
+ * GET/POST /api/payment/accept
  * Handles successful payment redirect
  */
-router.get('/accept', (req, res) => {
+router.get('/accept', handlePaymentAccept);
+router.post('/accept', handlePaymentAccept);
+
+async function handlePaymentAccept(req, res) {
     try {
-        // Log all query parameters to see what Paysera sends
-        console.log('All query parameters from Paysera (accept):', req.query);
+        // Log all query parameters and body to see what Paysera sends
+        console.log('=== PAYMENT ACCEPT CALLBACK ===');
+        console.log('Method:', req.method);
+        console.log('Query parameters:', req.query);
+        console.log('Body:', req.body);
+        console.log('Request URL:', req.url);
+        console.log('Request headers:', req.headers);
         
-        const { orderid } = req.query;
+        // Paysera might use different parameter names - check both query and body
+        const allParams = { ...req.query, ...req.body };
+        let orderid = allParams.orderid || allParams.order_id || allParams.orderId || allParams.projectorder;
+        
+        // If no direct orderid found, try to extract from Paysera data parameter
+        if (!orderid && allParams.data) {
+            try {
+                // Decode base64 data parameter
+                const decodedData = Buffer.from(allParams.data, 'base64').toString('utf-8');
+                console.log('Decoded Paysera data:', decodedData);
+                
+                // Parse URL-encoded parameters from decoded data
+                const urlParams = new URLSearchParams(decodedData);
+                orderid = urlParams.get('orderid');
+                
+                // Also extract other useful information
+                const status = urlParams.get('status');
+                const amount = urlParams.get('amount');
+                const currency = urlParams.get('currency');
+                const paymentMethod = urlParams.get('payment');
+                
+                console.log('Extracted from Paysera data:', {
+                    orderid,
+                    status,
+                    amount,
+                    currency,
+                    paymentMethod
+                });
+            } catch (error) {
+                console.error('Error decoding Paysera data parameter:', error);
+            }
+        }
+        
+        console.log('All combined params:', allParams);
+        console.log('Final extracted orderid:', orderid);
         
         if (!orderid) {
-            console.error('No orderid in accept callback');
-            res.redirect('/payment-error');
+            console.error('No orderid found in accept callback. Available params:', Object.keys(allParams));
+            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+            res.redirect(`${frontendUrl}/payment-cancelled?error=missing_orderid`);
             return;
         }
 
-        // Try to get payment data from callback results
-        let paymentData = null;
-        if (global.paymentResults && global.paymentResults[orderid]) {
-            paymentData = global.paymentResults[orderid];
-            console.log('Found payment data from callback:', paymentData);
-        } else {
-            console.log('No payment data found for orderid:', orderid);
-            // Fallback to query parameters if available
-            const { amount, currency, payment } = req.query;
-            paymentData = {
-                amount: amount || '0',
-                currency: currency || 'EUR',
-                paymentMethod: payment || 'Nenurodyta'
+        // Get payment data from database
+        try {
+            const job = await queuePaymentOperation('get-payment-status', { orderId: orderid });
+            const result = await job.waitUntilFinished(queueEvents);
+            
+            let paymentData = {
+                amount: '0',
+                currency: 'EUR',
+                paymentMethod: 'Nenurodyta'
             };
-        }
 
-        // Redirect to frontend success page with payment details
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-        const successUrl = `${frontendUrl}/payment-success?orderid=${orderid}&amount=${paymentData.amount}&currency=${paymentData.currency}&payment=${paymentData.paymentMethod}`;
-        
-        console.log('Redirecting to success page:', successUrl);
-        res.redirect(successUrl);
+            if (result.success) {
+                paymentData = {
+                    amount: result.payment.amount,
+                    currency: result.payment.currency,
+                    paymentMethod: result.payment.paymentMethod || 'Nenurodyta'
+                };
+            }
+
+            // Redirect to frontend success page with payment details
+            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+            const successUrl = `${frontendUrl}/payment-success?orderid=${orderid}&amount=${paymentData.amount}&currency=${paymentData.currency}&payment=${paymentData.paymentMethod}`;
+            
+            console.log('Redirecting to success page:', successUrl);
+            res.redirect(successUrl);
+            
+        } catch (error) {
+            console.error('Error retrieving payment data:', error);
+            // Fallback to query parameters if available
+            const allParams = { ...req.query, ...req.body };
+            const amount = allParams.amount;
+            const currency = allParams.currency;
+            const payment = allParams.payment;
+            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+            const successUrl = `${frontendUrl}/payment-success?orderid=${orderid}&amount=${amount || '0'}&currency=${currency || 'EUR'}&payment=${payment || 'Nenurodyta'}`;
+            res.redirect(successUrl);
+        }
         
     } catch (error) {
         console.error('Payment accept error:', error);
-        res.redirect('/payment-error');
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        res.redirect(`${frontendUrl}/payment-cancelled?error=server_error`);
     }
-});
+}
 
 /**
- * GET /api/payment/cancel
+ * GET/POST /api/payment/cancel
  * Handles cancelled payment redirect
  */
-router.get('/cancel', (req, res) => {
+router.get('/cancel', handlePaymentCancel);
+router.post('/cancel', handlePaymentCancel);
+
+function handlePaymentCancel(req, res) {
     try {
-        // Log all query parameters to see what Paysera sends
-        console.log('All query parameters from Paysera (cancel):', req.query);
+        // Log all query parameters and body to see what Paysera sends
+        console.log('=== PAYMENT CANCEL CALLBACK ===');
+        console.log('Method:', req.method);
+        console.log('Query parameters:', req.query);
+        console.log('Body:', req.body);
+        console.log('Request URL:', req.url);
         
-        const { orderid, amount, currency } = req.query;
+        // Paysera might use different parameter names - check both query and body
+        const allParams = { ...req.query, ...req.body };
+        let orderid = allParams.orderid || allParams.order_id || allParams.orderId || allParams.projectorder;
+        let amount = allParams.amount;
+        let currency = allParams.currency;
         
+        // If no direct orderid found, try to extract from Paysera data parameter
+        if (!orderid && allParams.data) {
+            try {
+                // Decode base64 data parameter
+                const decodedData = Buffer.from(allParams.data, 'base64').toString('utf-8');
+                console.log('Decoded Paysera data:', decodedData);
+                
+                // Parse URL-encoded parameters from decoded data
+                const urlParams = new URLSearchParams(decodedData);
+                orderid = urlParams.get('orderid');
+                amount = amount || urlParams.get('amount');
+                currency = currency || urlParams.get('currency');
+                
+                console.log('Extracted from Paysera data:', {
+                    orderid,
+                    amount,
+                    currency
+                });
+            } catch (error) {
+                console.error('Error decoding Paysera data parameter in cancel:', error);
+            }
+        }
+        
+        console.log('All combined params:', allParams);
         console.log('Processed cancel data:', { orderid, amount, currency });
 
         // Redirect to frontend cancel page with order ID and amount
@@ -136,9 +251,10 @@ router.get('/cancel', (req, res) => {
         
     } catch (error) {
         console.error('Payment cancel error:', error);
-        res.redirect('/payment-error');
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        res.redirect(`${frontendUrl}/payment-cancelled?error=server_error`);
     }
-});
+}
 
 /**
  * POST /api/payment/callback
@@ -155,41 +271,29 @@ router.post('/callback', async (req, res) => {
 
         console.log('Payment callback received:', response);
 
-        if (response.status === '1') {
-            // Payment successful
-            const orderId = response.orderid;
-            const payAmount = response.payamount ? response.payamount / 100 : response.amount / 100;
-            const payCurrency = response.paycurrency || response.currency;
-            const paymentMethod = response.payment;
-            const customerEmail = response.p_email;
+        const orderId = response.orderid;
+        const status = response.status === '1' ? 'completed' : 'failed';
+        const payAmount = response.payamount ? response.payamount / 100 : response.amount / 100;
+        const payCurrency = response.paycurrency || response.currency;
+        const paymentMethod = response.payment;
+        const transactionId = response.requestid || response.transaction || null;
 
-            // Store payment data in memory (in production, use database)
-            global.paymentResults = global.paymentResults || {};
-            global.paymentResults[orderId] = {
-                status: 'success',
-                amount: payAmount,
-                currency: payCurrency,
-                paymentMethod,
-                customerEmail,
-                timestamp: new Date().toISOString()
-            };
+        // Queue payment callback processing
+        await queuePaymentOperation('process-callback', {
+            orderId,
+            status,
+            amount: payAmount,
+            currency: payCurrency,
+            paymentMethod,
+            transactionId,
+            gatewayResponse: response,
+            paidAt: status === 'completed' ? new Date() : null
+        });
 
-            console.log('Payment successful and stored:', {
-                orderId,
-                amount: payAmount,
-                currency: payCurrency,
-                paymentMethod,
-                customerEmail
-            });
+        console.log(`Payment callback queued for processing: ${orderId}, status: ${status}`);
 
-            // Send success response to WebToPay
-            res.send('OK');
-            
-        } else {
-            // Payment failed
-            console.log('Payment failed:', response);
-            res.send('OK'); // Still send OK to acknowledge receipt
-        }
+        // Send success response to WebToPay
+        res.send('OK');
 
     } catch (error) {
         console.error('Payment callback error:', error);
@@ -205,15 +309,29 @@ router.get('/status/:orderId', async (req, res) => {
     try {
         const { orderId } = req.params;
         
-        // Here you should check the payment status from your database
-        // For now, returning a mock response
+        // Queue payment status check
+        const job = await queuePaymentOperation('get-payment-status', { orderId });
         
-        res.json({
-            success: true,
-            orderId,
-            status: 'pending', // 'pending', 'completed', 'failed', 'cancelled'
-            message: 'Payment status retrieved successfully'
-        });
+        // Wait for job completion (with timeout)
+        const result = await job.waitUntilFinished(queueEvents);
+        
+        if (result.success) {
+            res.json({
+                success: true,
+                orderId,
+                status: result.payment.status,
+                amount: result.payment.amount,
+                currency: result.payment.currency,
+                message: 'Payment status retrieved successfully'
+            });
+        } else {
+            res.json({
+                success: false,
+                orderId,
+                status: 'not_found',
+                message: result.message || 'Payment not found'
+            });
+        }
 
     } catch (error) {
         console.error('Payment status error:', error);
@@ -229,19 +347,31 @@ router.get('/status/:orderId', async (req, res) => {
  * GET /api/payment/data/:orderId
  * Get payment data for an order
  */
-router.get('/data/:orderId', (req, res) => {
+router.get('/data/:orderId', async (req, res) => {
     try {
         const { orderId } = req.params;
         
-        if (global.paymentResults && global.paymentResults[orderId]) {
+        // Queue payment data retrieval
+        const job = await queuePaymentOperation('get-payment-status', { orderId });
+        const result = await job.waitUntilFinished(queueEvents);
+        
+        if (result.success) {
             res.json({
                 success: true,
-                data: global.paymentResults[orderId]
+                data: {
+                    orderId: result.payment.orderId,
+                    amount: result.payment.amount,
+                    currency: result.payment.currency,
+                    status: result.payment.status,
+                    paymentMethod: result.payment.paymentMethod,
+                    createdAt: result.payment.createdAt,
+                    paidAt: result.payment.paidAt
+                }
             });
         } else {
             res.json({
                 success: false,
-                message: 'Payment data not found'
+                message: result.message || 'Payment data not found'
             });
         }
     } catch (error) {
@@ -301,6 +431,72 @@ router.get('/methods', async (req, res) => {
             message: 'Failed to get payment methods',
             error: error.message
         });
+    }
+});
+
+/**
+ * GET /api/payment/test-success/:orderId
+ * Test endpoint to simulate successful payment callback
+ */
+router.get('/test-success/:orderId', async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        
+        console.log('=== TEST PAYMENT SUCCESS SIMULATION ===');
+        console.log('Simulating successful payment for orderId:', orderId);
+        
+        // Update payment status to completed
+        await queuePaymentOperation('update-payment-status', {
+            orderId,
+            status: 'completed',
+            paymentMethod: 'Test Bank',
+            transactionId: `TEST-${Date.now()}`
+        });
+        
+        // Redirect to frontend success page
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const successUrl = `${frontendUrl}/payment-success?orderid=${orderId}&amount=200&currency=EUR&payment=Test Bank`;
+        
+        console.log('Redirecting to success page:', successUrl);
+        res.redirect(successUrl);
+        
+    } catch (error) {
+        console.error('Test payment success error:', error);
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        res.redirect(`${frontendUrl}/payment-cancelled?error=test_error`);
+    }
+});
+
+/**
+ * GET /api/payment/test-cancel/:orderId
+ * Test endpoint to simulate cancelled payment callback
+ */
+router.get('/test-cancel/:orderId', async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        
+        console.log('=== TEST PAYMENT CANCEL SIMULATION ===');
+        console.log('Simulating cancelled payment for orderId:', orderId);
+        
+        // Update payment status to cancelled
+        await queuePaymentOperation('update-payment-status', {
+            orderId,
+            status: 'cancelled',
+            paymentMethod: null,
+            transactionId: null
+        });
+        
+        // Redirect to frontend cancelled page
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const cancelUrl = `${frontendUrl}/payment-cancelled?orderid=${orderId}&amount=200&currency=EUR`;
+        
+        console.log('Redirecting to cancel page:', cancelUrl);
+        res.redirect(cancelUrl);
+        
+    } catch (error) {
+        console.error('Test payment cancel error:', error);
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        res.redirect(`${frontendUrl}/payment-cancelled?error=test_error`);
     }
 });
 

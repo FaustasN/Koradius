@@ -91,6 +91,9 @@ services:
       WEBTOPAY_PROJECT_ID: 249340
       WEBTOPAY_PASSWORD: add08f927c0dec3bdf1f6d3af8db187e
       WEBTOPAY_TEST_MODE: true
+      # Payment URLs
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      BACKEND_URL: ${BACKEND_URL:-http://localhost:8080}
     expose:
       - "3001"
     volumes:
@@ -140,6 +143,9 @@ services:
       WEBTOPAY_PROJECT_ID: 249340
       WEBTOPAY_PASSWORD: add08f927c0dec3bdf1f6d3af8db187e
       WEBTOPAY_TEST_MODE: true
+      # Payment URLs
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      BACKEND_URL: ${BACKEND_URL:-http://localhost:8080}
     expose:
       - "3001"
     volumes:

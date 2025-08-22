@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MapPin, Clock, Star, ArrowRight, X, Calendar, Users, Phone, Mail, User, CreditCard, ChevronLeft, ChevronRight } from 'lucide-react';
-import { travelPacketsApi, transformTravelPacket, apiService } from '../services/apiService';
+import { travelPacketsApi, transformTravelPacket } from '../services/apiService';
 import { notificationUtils } from '../utils/notificationUtils';
+import PaymentButton from './PaymentButton';
 
 const FeaturedToursWithPayment = () => {
   const navigate = useNavigate();
@@ -35,11 +36,6 @@ const FeaturedToursWithPayment = () => {
   // Payment state
   const [showPaymentOptions, setShowPaymentOptions] = useState(false);
   const [bookingConfirmed, setBookingConfirmed] = useState(false);
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const [paymentForm, setPaymentForm] = useState({
-    name: '',
-    email: ''
-  });
 
   // Load featured tours from database
   useEffect(() => {
@@ -139,11 +135,7 @@ const FeaturedToursWithPayment = () => {
         customer: bookingForm
       });
       
-      // Auto-fill payment form with booking data
-      setPaymentForm({
-        name: bookingForm.name,
-        email: bookingForm.email
-      });
+      // Auto-fill payment form with booking data - no longer needed with PaymentButton
       
       // Show payment options after successful booking
       setBookingConfirmed(true);
@@ -294,7 +286,6 @@ const FeaturedToursWithPayment = () => {
     setSelectedTour(null);
     setShowPaymentOptions(false);
     setBookingConfirmed(false);
-    setPaymentForm({ name: '', email: '' });
     setPhoneError('');
     setNameError('');
     setEmailError('');
@@ -302,51 +293,9 @@ const FeaturedToursWithPayment = () => {
     setDurationError('');
   };
 
-  const handlePaymentSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!paymentForm.name.trim() || !paymentForm.email.trim()) {
-      notificationUtils.showError('Prašome užpildyti visus laukus');
-      return;
-    }
-
-    setIsProcessingPayment(true);
-    
-    try {
-      const orderId = generateOrderId();
-      const amount = calculateTotalPrice();
-      const description = `${selectedTour?.title} - ${bookingForm.numberOfPeople} asm.`;
-
-             const response = await apiService.post('/payment/create', {
-         amount,
-         currency: 'EUR',
-         orderId,
-         description,
-         customerName: paymentForm.name,
-         customerEmail: paymentForm.email,
-         tourId: selectedTour?.id,
-         numberOfPeople: bookingForm.numberOfPeople,
-         departureDate: bookingForm.departureDate
-       });
-
-      if (response.paymentUrl) {
-        // Redirect to Paysera
-        window.location.href = response.paymentUrl;
-      } else {
-        throw new Error('Nepavyko gauti mokėjimo URL');
-      }
-      
-    } catch (error) {
-      console.error('Payment creation error:', error);
-      notificationUtils.showError('Įvyko klaida kuriant mokėjimą');
-    } finally {
-      setIsProcessingPayment(false);
-    }
-  };
-
   const generateOrderId = () => {
     const timestamp = Date.now();
-    const random = Math.random().toString(36).substr(2, 9);
+    const random = Math.random().toString(36).substring(2, 9);
     return `KOR-${timestamp}-${random}`.toUpperCase();
   };
 
@@ -792,63 +741,49 @@ const FeaturedToursWithPayment = () => {
                   <div className="space-y-4">
                     <h4 className="font-semibold text-gray-800">Mokėjimo informacija:</h4>
                     
-                    {/* Payment Form */}
-                    <form onSubmit={handlePaymentSubmit} className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Vardas ir pavardė *
-                        </label>
-                        <input
-                          type="text"
-                          value={paymentForm.name}
-                          onChange={(e) => setPaymentForm({...paymentForm, name: e.target.value})}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          required
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          El. paštas *
-                        </label>
-                        <input
-                          type="email"
-                          value={paymentForm.email}
-                          onChange={(e) => setPaymentForm({...paymentForm, email: e.target.value})}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          required
-                        />
-                      </div>
-
-                                             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                         <div className="flex justify-between items-center">
-                           <span className="text-green-800 font-medium">Bendra suma:</span>
-                                                     <span className="text-2xl font-bold text-green-600">
-                             €{calculateTotalPrice().toFixed(2)}
-                           </span>
+                    {/* Payment Button */}
+                    <div className="space-y-4">
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <div className="flex justify-between items-center">
+                          <span className="text-green-800 font-medium">Bendra suma:</span>
+                          <span className="text-2xl font-bold text-green-600">
+                            €{calculateTotalPrice().toFixed(2)}
+                          </span>
                         </div>
                       </div>
 
-                      <button
-                        type="submit"
-                        disabled={isProcessingPayment}
-                        className="w-full py-3 bg-teal-600 text-white rounded-full font-bold hover:bg-teal-700 transition-colors disabled:opacity-50 flex items-center justify-center"
-                      >
-                        {isProcessingPayment ? (
-                          <>
-                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                            Apdorojama...
-                          </>
-                        ) : (
-                          <>
-                            <CreditCard className="h-5 w-5 mr-2" />
-                            Mokėti Paysera
-                          </>
-                        )}
-                      </button>
-                    </form>
+                      <PaymentButton
+                        amount={calculateTotalPrice()}
+                        currency="EUR"
+                        orderId={generateOrderId()}
+                        description={`${selectedTour?.title} - ${bookingForm.numberOfPeople} asm.`}
+                        customerEmail={bookingForm.email}
+                        customerName={bookingForm.name}
+                        customerPhone={bookingForm.phone}
+                        productInfo={{
+                          tourId: selectedTour?.id,
+                          tourTitle: selectedTour?.title,
+                          numberOfPeople: bookingForm.numberOfPeople,
+                          departureDate: bookingForm.departureDate,
+                          duration: selectedTour?.duration,
+                          location: selectedTour?.location
+                        }}
+                        className="w-full"
+                        size="lg"
+                        onPaymentCreated={(paymentUrl) => {
+                          console.log('Payment created:', paymentUrl);
+                        }}
+                        onError={(error) => {
+                          notificationUtils.showError(`Mokėjimo klaida: ${error}`);
+                        }}
+                      />
 
-                  
+                      <div className="text-center">
+                        <p className="text-sm text-gray-600">
+                          Mokėjimas yra saugus ir užšifruotas per Paysera
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
