@@ -2201,11 +2201,6 @@ const DashboardPage = () => {
                   <EnhancedServerMonitoring />
                 )}
 
-                {/* Logs Tab */}
-                {activeTab === 'logs' && (
-                  <LoggingComponent />
-                )}
-
               </>
             )}
           </div>
