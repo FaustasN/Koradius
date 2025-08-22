@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { RefreshProvider } from './contexts/RefreshContext';
 import Layout from './components/Layout';
 import HomePage from './pages/HomePage';
 
@@ -16,28 +17,30 @@ import SearchPage from './pages/SearchPage';
 const App = () => {
   return (
     <AuthProvider>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<HomePage />} />
+      <RefreshProvider>
+        <Routes>
+          <Route path="/" element={<Layout />}>
+            <Route index element={<HomePage />} />
 
-          <Route path="gallery" element={<GalleryPage />} />
-          <Route path="reviews" element={<ReviewsPage />} />
-          <Route path="about" element={<AboutPage />} />
-          <Route path="contact" element={<ContactPage />} />
-          <Route path="search" element={<SearchPage />} />
-        </Route>
-        
+            <Route path="gallery" element={<GalleryPage />} />
+            <Route path="reviews" element={<ReviewsPage />} />
+            <Route path="about" element={<AboutPage />} />
+            <Route path="contact" element={<ContactPage />} />
+            <Route path="search" element={<SearchPage />} />
+          </Route>
+          
 
-        <Route path="/dashboard/login" element={<DashboardLoginPage />} />
-        <Route 
-          path="/dashboard" 
-          element={
-            <ProtectedRoute>
-              <DashboardPage />
-            </ProtectedRoute>
-          } 
-        />
-      </Routes>
+          <Route path="/dashboard/login" element={<DashboardLoginPage />} />
+          <Route 
+            path="/dashboard" 
+            element={
+              <ProtectedRoute>
+                <DashboardPage />
+              </ProtectedRoute>
+            } 
+          />
+        </Routes>
+      </RefreshProvider>
     </AuthProvider>
   );
 };

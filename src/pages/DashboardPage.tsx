@@ -410,7 +410,7 @@ const DashboardPage = () => {
     }
   }, [isAuthenticated]); // Run when authentication state changes
 
-  // Set up real-time notification polling and auto-refresh
+  // Simple auto-refresh for notifications and backend health
   useEffect(() => {
     if (isAuthenticated) {
       // Poll for new notifications every 30 seconds
@@ -423,33 +423,14 @@ const DashboardPage = () => {
         }
       }, 30000); // 30 seconds
 
-      // Auto-refresh current tab data every 60 seconds
-      const dataRefreshInterval = setInterval(() => {
-        // Always refresh backend health for overview card
+      // Auto-refresh backend health every 15 seconds
+      const healthInterval = setInterval(() => {
         loadBackendHealth().catch(error => console.error('Error auto-refreshing backend health:', error));
-        
-        switch (activeTab) {
-          case 'gallery':
-            loadGalleryItems().catch(error => console.error('Error auto-refreshing gallery:', error));
-            break;
-          case 'packets':
-            loadTravelPackets().catch(error => console.error('Error auto-refreshing packets:', error));
-            break;
-          case 'zinutes':
-            loadContacts().catch(error => console.error('Error auto-refreshing contacts:', error));
-            break;
-          case 'atsiliepimai':
-            loadReviews().catch(error => console.error('Error auto-refreshing reviews:', error));
-            break;
-          case 'notifications':
-            loadNotifications().catch(error => console.error('Error auto-refreshing notifications:', error));
-            break;
-        }
-      }, 60000); // 60 seconds
+      }, 15000); // 15 seconds
 
       return () => {
         clearInterval(notificationInterval);
-        clearInterval(dataRefreshInterval);
+        clearInterval(healthInterval);
       };
     }
   }, [isAuthenticated, activeTab]);
@@ -1597,12 +1578,6 @@ const DashboardPage = () => {
                   <div>
                     <div className="flex justify-between items-center mb-6">
                       <h3 className="text-xl font-semibold text-gray-900">Kontaktai</h3>
-                      <button
-                        onClick={loadContacts}
-                        className="text-teal-600 hover:text-teal-800 text-sm font-medium"
-                      >
-                        Atnaujinti
-                      </button>
                     </div>
 
                     {/* Filter Controls for Contacts */}
@@ -1900,12 +1875,6 @@ const DashboardPage = () => {
                   <div>
                     <div className="flex justify-between items-center mb-6">
                       <h3 className="text-xl font-semibold text-gray-900">Atsiliepimai</h3>
-                      <button
-                        onClick={loadReviews}
-                        className="text-teal-600 hover:text-teal-800 text-sm font-medium"
-                      >
-                        Atnaujinti
-                      </button>
                     </div>
 
                     {/* Filter Controls for Reviews */}
@@ -2114,12 +2083,6 @@ const DashboardPage = () => {
                             Pažymėti viską kaip perskaityta
                           </button>
                         )}
-                        <button
-                          onClick={loadNotifications}
-                          className="text-teal-600 hover:text-teal-800 text-sm font-medium"
-                        >
-                          Atnaujinti
-                        </button>
                       </div>
                     </div>
 

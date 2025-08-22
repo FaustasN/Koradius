@@ -18,6 +18,7 @@ import {
   Clock
 } from 'lucide-react';
 import { serverAPI } from '../services/adminApiService';
+import { useRefreshContext } from '../contexts/RefreshContext';
 import LoggingComponent from './LoggingComponent';
 
 interface SystemMetrics {
@@ -151,12 +152,12 @@ interface LoadBalancerStatus {
 }
 
 const EnhancedServerMonitoring: React.FC = () => {
+  const { actions: refreshActions } = useRefreshContext();
   const [serverStatus, setServerStatus] = useState<EnhancedServerStatus | null>(null);
   const [systemHistory, setSystemHistory] = useState<SystemHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [autoRefresh, setAutoRefresh] = useState(true);
   const [activeSubTab, setActiveSubTab] = useState<'overview' | 'metrics' | 'history' | 'logging'>('overview');
 
   const fetchServerData = async () => {
@@ -181,12 +182,19 @@ const EnhancedServerMonitoring: React.FC = () => {
     fetchServerData();
   }, []);
 
+  // Subscribe to centralized refresh system
   useEffect(() => {
-    if (!autoRefresh) return;
-
-    const interval = setInterval(fetchServerData, 10000); // Refresh every 10 seconds for real-time monitoring
-    return () => clearInterval(interval);
-  }, [autoRefresh]);
+    // Subscribe to refresh events
+    const unsubscribe = refreshActions.onRefresh('serverMonitoring', fetchServerData);
+    
+    // Enable server monitoring in the refresh system
+    refreshActions.enableComponentRefresh('serverMonitoring');
+    
+    return () => {
+      unsubscribe();
+      refreshActions.disableComponentRefresh('serverMonitoring');
+    };
+  }, []); // Empty dependency array to avoid re-subscribing
 
   const formatUptime = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600);
@@ -249,36 +257,6 @@ const EnhancedServerMonitoring: React.FC = () => {
   //   } catch (error) {
   //     console.error('Error retrying failed jobs:', error);
   //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
-  // const cleanQueue = async (queueName: string) => {
-  //   try {
-  //     setLoading(true);
-  //     const response = await serverAPI.cleanQueue(queueName);
-  //     console.log(`Cleaned ${queueName} queue:`, response);
-  //     await fetchServerData();
-  //   } catch (error) {
-  //     console.error('Error cleaning queue:', error);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
-  // const getQueueHealthStatus = (queueName: string) => {
-  //   const health = serverStatus?.queues?.health?.[queueName];
-  //   if (!health) return { status: 'unknown', color: 'text-gray-500' };
-    
-  //   if (health.healthy) {
-  //     return { status: 'healthy', color: 'text-green-600' };
-  //   } else if (health.failed > 10) {
-  //     return { status: 'critical', color: 'text-red-600' };
-  //   } else {
-  //     return { status: 'warning', color: 'text-yellow-600' };
-  //   }
-  // };
-
   const renderSystemOverview = () => (
     <div className="space-y-6">
       {/* Overall System Status */}
@@ -778,28 +756,6 @@ const EnhancedServerMonitoring: React.FC = () => {
               Last updated: {lastUpdated.toLocaleTimeString()}
             </p>
           )}
-        </div>
-        
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={() => setAutoRefresh(!autoRefresh)}
-            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              autoRefresh 
-                ? 'bg-green-100 text-green-700 hover:bg-green-200' 
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Auto-refresh {autoRefresh ? 'ON' : 'OFF'}
-          </button>
-          
-          <button
-            onClick={fetchServerData}
-            disabled={loading}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center space-x-2"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
-          </button>
         </div>
       </div>
 
