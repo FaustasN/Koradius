@@ -2,6 +2,7 @@ const { Worker } = require('bullmq');
 const { paymentQueue, redisConfig } = require('./config');
 const { Pool } = require('pg');
 const crypto = require('crypto');
+const { mapPaymentMethod } = require('../utils/paymentMethodMapper');
 
 // Database connection for payment operations
 const createDbConnection = () => {
@@ -279,16 +280,39 @@ async function updatePaymentStatus(data) {
   const client = await pool.connect();
   
   try {
-    const { orderId, status, notes } = data;
+    const { orderId, status, paymentMethod, paidAt, transactionId, notes } = data;
 
-    const updateResult = await client.query(`
+    // Build dynamic update query
+    let updateFields = ['status = $2', 'updated_at = CURRENT_TIMESTAMP'];
+    let updateValues = [orderId, status];
+    let paramIndex = 3;
+
+    if (paymentMethod) {
+      updateFields.push(`payment_method = $${paramIndex}`);
+      updateValues.push(paymentMethod);
+      paramIndex++;
+    }
+
+    if (paidAt) {
+      updateFields.push(`paid_at = $${paramIndex}`);
+      updateValues.push(paidAt);
+      paramIndex++;
+    }
+
+    if (transactionId) {
+      updateFields.push(`transaction_id = $${paramIndex}`);
+      updateValues.push(transactionId);
+      paramIndex++;
+    }
+
+    const updateQuery = `
       UPDATE payments 
-      SET 
-        status = $2,
-        updated_at = CURRENT_TIMESTAMP
+      SET ${updateFields.join(', ')}
       WHERE order_id = $1
-      RETURNING id, order_id, status
-    `, [orderId, status]);
+      RETURNING id, order_id, status, payment_method
+    `;
+
+    const updateResult = await client.query(updateQuery, updateValues);
 
     if (updateResult.rows.length === 0) {
       throw new Error(`Payment not found for order ID: ${orderId}`);
@@ -297,6 +321,7 @@ async function updatePaymentStatus(data) {
     const payment = updateResult.rows[0];
 
     // Add to payment history
+    const historyNote = notes || `Status updated to ${status}` + (paymentMethod ? ` via ${paymentMethod}` : '');
     await client.query(`
       INSERT INTO payment_history (
         payment_id, 
@@ -304,9 +329,10 @@ async function updatePaymentStatus(data) {
         notes, 
         created_at
       ) VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
-    `, [payment.id, status, notes || `Status updated to ${status}`]);
+    `, [payment.id, status, historyNote]);
 
-    console.log(`Payment status updated for order: ${orderId}, new status: ${status}`);
+    const logMessage = `Payment status updated for order: ${orderId}, new status: ${status}` + (paymentMethod ? `, method: ${paymentMethod}` : '');
+    console.log(logMessage);
     
     return {
       success: true,

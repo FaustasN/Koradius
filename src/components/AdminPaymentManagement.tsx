@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { mapPaymentMethod } from '../utils/paymentMethodMapper';
 
 // Import the existing admin API service
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
@@ -224,7 +225,7 @@ const AdminPaymentManagement: React.FC = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Payment Method</label>
-              <p className="mt-1 text-sm text-gray-900">{payment.payment_method || 'N/A'}</p>
+              <p className="mt-1 text-sm text-gray-900">{mapPaymentMethod(payment.payment_method)}</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Transaction ID</label>

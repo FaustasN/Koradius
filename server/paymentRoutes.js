@@ -3,6 +3,7 @@ const WebToPay = require('./webtopay');
 const { queuePaymentOperation } = require('./queues/paymentQueue');
 const { QueueEvents } = require('bullmq');
 const { redisConfig } = require('./queues/config');
+const { mapPaymentMethod } = require('./utils/paymentMethodMapper');
 const router = express.Router();
 
 // Initialize queue events for waiting on job completion
@@ -98,17 +99,15 @@ router.post('/accept', handlePaymentAccept);
 
 async function handlePaymentAccept(req, res) {
     try {
-        // Log all query parameters and body to see what Paysera sends
+        // Log callback for debugging (simplified)
         console.log('=== PAYMENT ACCEPT CALLBACK ===');
         console.log('Method:', req.method);
-        console.log('Query parameters:', req.query);
-        console.log('Body:', req.body);
         console.log('Request URL:', req.url);
-        console.log('Request headers:', req.headers);
         
         // Paysera might use different parameter names - check both query and body
         const allParams = { ...req.query, ...req.body };
         let orderid = allParams.orderid || allParams.order_id || allParams.orderId || allParams.projectorder;
+        let extractedPaymentMethod = null;
         
         // If no direct orderid found, try to extract from Paysera data parameter
         if (!orderid && allParams.data) {
@@ -126,6 +125,7 @@ async function handlePaymentAccept(req, res) {
                 const amount = urlParams.get('amount');
                 const currency = urlParams.get('currency');
                 const paymentMethod = urlParams.get('payment');
+                extractedPaymentMethod = paymentMethod;
                 
                 console.log('Extracted from Paysera data:', {
                     orderid,
@@ -139,8 +139,8 @@ async function handlePaymentAccept(req, res) {
             }
         }
         
-        console.log('All combined params:', allParams);
         console.log('Final extracted orderid:', orderid);
+        console.log('Final extracted payment method:', extractedPaymentMethod);
         
         if (!orderid) {
             console.error('No orderid found in accept callback. Available params:', Object.keys(allParams));
@@ -161,11 +161,26 @@ async function handlePaymentAccept(req, res) {
             };
 
             if (result.success) {
+                // Use extracted payment method if available, otherwise use database value, otherwise default
+                const rawPaymentMethod = extractedPaymentMethod || result.payment.paymentMethod;
+                const finalPaymentMethod = mapPaymentMethod(rawPaymentMethod);
+                
                 paymentData = {
                     amount: result.payment.amount,
                     currency: result.payment.currency,
-                    paymentMethod: result.payment.paymentMethod || 'Nenurodyta'
+                    paymentMethod: finalPaymentMethod
                 };
+                
+                // Update payment status to completed with payment method (store raw method in DB)
+                const updateJob = await queuePaymentOperation('update-payment-status', {
+                    orderId: orderid,
+                    status: 'completed',
+                    paymentMethod: rawPaymentMethod, // Store the raw Paysera method in DB
+                    paidAt: new Date(),
+                    gatewayResponse: allParams // Store the full callback data
+                });
+                await updateJob.waitUntilFinished(queueEvents);
+                console.log(`Payment ${orderid} marked as completed with method: ${rawPaymentMethod} (${finalPaymentMethod})`);
             }
 
             // Redirect to frontend success page with payment details
@@ -203,11 +218,9 @@ router.post('/cancel', handlePaymentCancel);
 
 function handlePaymentCancel(req, res) {
     try {
-        // Log all query parameters and body to see what Paysera sends
+        // Log callback for debugging (simplified)
         console.log('=== PAYMENT CANCEL CALLBACK ===');
         console.log('Method:', req.method);
-        console.log('Query parameters:', req.query);
-        console.log('Body:', req.body);
         console.log('Request URL:', req.url);
         
         // Paysera might use different parameter names - check both query and body
@@ -239,7 +252,6 @@ function handlePaymentCancel(req, res) {
             }
         }
         
-        console.log('All combined params:', allParams);
         console.log('Processed cancel data:', { orderid, amount, currency });
 
         // Redirect to frontend cancel page with order ID and amount

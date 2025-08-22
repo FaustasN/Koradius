@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
+import { mapPaymentMethod } from '../utils/paymentMethodMapper';
+
 // Simple Check Circle Icon component
 const CheckCircleIcon = ({ className }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -33,21 +35,14 @@ const PaymentSuccessPage: React.FC = () => {
     });
 
     if (orderId && amount && currency) {
-      // Handle amount - Paysera might send it in cents or euros
-      let finalAmount;
-      if (parseInt(amount) > 1000) {
-        // If amount > 1000, it's likely in cents
-        finalAmount = (parseInt(amount) / 100).toFixed(2);
-      } else {
-        // If amount <= 1000, it's likely in euros
-        finalAmount = parseFloat(amount).toFixed(2);
-      }
+      // Handle amount - our backend sends the amount in the correct format (euros)
+      const finalAmount = parseFloat(amount).toFixed(2);
 
       setOrderDetails({
         orderId,
         amount: finalAmount,
         currency,
-        paymentMethod: payment || 'Nenurodyta'
+        paymentMethod: mapPaymentMethod(payment)
       });
     } else {
       console.log('Missing required parameters:', { orderId, amount, currency });
