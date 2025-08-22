@@ -63,8 +63,12 @@ export const authAPI = {
 
 // Notifications API
 export const notificationsAPI = {
-  getAll: async () => {
-    const response = await fetch(`${API_BASE_URL}/notifications`, {
+  getAll: async (sortBy?: 'date' | 'priority' | 'type') => {
+    const url = new URL(`${API_BASE_URL}/notifications`);
+    if (sortBy) {
+      url.searchParams.append('sortBy', sortBy);
+    }
+    const response = await fetch(url.toString(), {
       headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Failed to fetch notifications');
