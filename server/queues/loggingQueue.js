@@ -97,40 +97,44 @@ class LoggingQueueWorker {
   async writeAuditLog(data) {
     const {
       id,
-      action,
-      resource,
+      timestamp,
+      level,
+      message,
+      instanceId,
+      metadata,
+      traceId,
+      spanId,
       userId,
       ipAddress,
       userAgent,
-      metadata,
-      sessionId,
       requestId,
-      timestamp
+      sessionId
     } = data;
 
     const query = `
       INSERT INTO logs (
         id, timestamp, level, message, log_type, instance_id,
-        user_id, ip_address, user_agent, metadata, session_id, 
-        request_id, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        metadata, trace_id, span_id, user_id, ip_address, 
+        user_agent, request_id, session_id, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       RETURNING id
     `;
 
-    const message = `${action} on ${resource}`;
     const values = [
       id,
       timestamp || new Date(),
-      'info', // Audit logs are typically info level
-      message,
+      level || 'info',
+      message || 'Audit log entry',
       'audit',
-      this.instanceId,
+      instanceId || this.instanceId,
+      metadata ? JSON.stringify(metadata) : null,
+      traceId,
+      spanId,
       userId,
       ipAddress,
       userAgent,
-      metadata ? JSON.stringify(metadata) : null,
-      sessionId,
       requestId,
+      sessionId,
       new Date()
     ];
 
@@ -214,40 +218,44 @@ class LoggingQueueWorker {
   async writeAuditLogWithClient(client, data) {
     const {
       id,
-      action,
-      resource,
+      timestamp,
+      level,
+      message,
+      instanceId,
+      metadata,
+      traceId,
+      spanId,
       userId,
       ipAddress,
       userAgent,
-      metadata,
-      sessionId,
       requestId,
-      timestamp
+      sessionId
     } = data;
 
     const query = `
       INSERT INTO logs (
         id, timestamp, level, message, log_type, instance_id,
-        user_id, ip_address, user_agent, metadata, session_id, 
-        request_id, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        metadata, trace_id, span_id, user_id, ip_address, 
+        user_agent, request_id, session_id, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       RETURNING id
     `;
 
-    const message = `${action} on ${resource}`;
     const values = [
       id,
       timestamp || new Date(),
-      'info',
-      message,
+      level || 'info',
+      message || 'Audit log entry',
       'audit',
-      this.instanceId,
+      instanceId || this.instanceId,
+      metadata ? JSON.stringify(metadata) : null,
+      traceId,
+      spanId,
       userId,
       ipAddress,
       userAgent,
-      metadata ? JSON.stringify(metadata) : null,
-      sessionId,
       requestId,
+      sessionId,
       new Date()
     ];
 

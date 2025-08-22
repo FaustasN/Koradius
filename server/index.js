@@ -2240,23 +2240,27 @@ app.get('/api/admin/logs/compliance', authenticateToken, async (req, res) => {
 
 app.delete('/api/admin/logs/cleanup', authenticateToken, async (req, res) => {
   try {
-    if (!loggingService) {
-      return res.status(503).json({ error: 'Logging service not initialized' });
-    }
-
     const { retentionDays = 30 } = req.body;
-    const deletedCount = await loggingService.cleanOldLogs(parseInt(retentionDays));
     
+    // Queue the cleanup operation instead of doing it directly
+    const job = await queueDatabaseOperation('cleanup-logs', { 
+      retentionDays: parseInt(retentionDays) 
+    }, { 
+      priority: 'medium' 
+    });
+    
+    // Don't wait for completion, just return success with job info
     res.json({
       success: true,
-      message: `Cleaned up ${deletedCount} old log entries`,
-      deletedCount,
+      message: `Log cleanup operation queued successfully`,
+      jobId: job.id,
       retentionDays: parseInt(retentionDays),
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      note: "Cleanup is being processed in the background"
     });
   } catch (error) {
-    console.error('Error cleaning up logs:', error);
-    res.status(500).json({ error: 'Failed to clean up logs' });
+    console.error('Error queuing log cleanup:', error);
+    res.status(500).json({ error: 'Failed to queue log cleanup operation' });
   }
 });
 
