@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Settings, Image, MessageSquare, Clock, Plus, Edit, Trash2, Bell, Package, Database, Search, Star, Phone, Mail, Home, CheckCircle, Eye, EyeOff, ChevronUp, ChevronDown, BarChart3, Server } from 'lucide-react';
+import { LogOut, Settings, Image, MessageSquare, Clock, Plus, Edit, Trash2, Bell, Package, Database, Search, Star, Phone, Mail, Home, CheckCircle, Eye, EyeOff, ChevronUp, ChevronDown, BarChart3, Server, FileText } from 'lucide-react';
 import ImageUpload from '../components/ImageUpload';
 import GoogleAnalytics from '../components/GoogleAnalytics';
 import EnhancedServerMonitoring from '../components/EnhancedServerMonitoring';
+import LoggingComponent from '../components/LoggingComponent';
 import { notificationsAPI, contactsAPI, reviewsAPI, serverAPI } from '../services/adminApiService';
 import { galleryApi, travelPacketsApi } from '../services/apiService';
 import { useNotificationManager } from '../utils/notificationUtils';
@@ -126,7 +127,7 @@ const DashboardPage = () => {
   const notificationManager = useNotificationManager();
   const [userInfo, setUserInfo] = useState<{ username: string; role: string; exp: number } | null>(null);
   const [timeUntilExpiry, setTimeUntilExpiry] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'gallery' | 'packets' | 'zinutes' | 'atsiliepimai' | 'notifications' | 'analytics' | 'server'>('gallery');
+  const [activeTab, setActiveTab] = useState<'gallery' | 'packets' | 'zinutes' | 'atsiliepimai' | 'notifications' | 'analytics' | 'server' | 'logs'>('gallery');
   const [isLoading, setIsLoading] = useState(false);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
 
@@ -1453,6 +1454,19 @@ const DashboardPage = () => {
                 <span>Server</span>
               </div>
             </button>
+            <button
+              onClick={() => setActiveTab('logs')}
+              className={`flex-1 px-6 py-4 text-sm font-medium transition-colors duration-200 ${
+                activeTab === 'logs'
+                  ? 'text-orange-600 border-b-2 border-orange-600 bg-orange-50'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center justify-center space-x-2">
+                <FileText className="h-5 w-5" />
+                <span>Logs</span>
+              </div>
+            </button>
           </div>
 
                      {/* Tab Content */}
@@ -2198,6 +2212,11 @@ const DashboardPage = () => {
                 {/* Server Monitoring Tab */}
                 {activeTab === 'server' && (
                   <EnhancedServerMonitoring />
+                )}
+
+                {/* Logs Tab */}
+                {activeTab === 'logs' && (
+                  <LoggingComponent />
                 )}
 
               </>

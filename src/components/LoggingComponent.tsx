@@ -13,7 +13,6 @@ import {
   Server,
   Shield,
   Eye,
-  Trash2,
   RefreshCw,
   Calendar,
   FileText,
@@ -202,29 +201,6 @@ const LoggingComponent: React.FC = () => {
     }
   };
 
-  const cleanupLogs = async () => {
-    if (!confirm('Are you sure you want to cleanup old logs? This action cannot be undone.')) {
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const response = await loggingAPI.cleanupLogs(30); // Default 30 days retention
-      alert(`Successfully cleaned up ${response.deletedCount} old log entries`);
-      
-      // Reload current view
-      if (activeSubTab === 'logs') {
-        loadLogs();
-      } else if (activeSubTab === 'stats') {
-        loadStats();
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to cleanup logs');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const calculateTimeRange = () => {
     const start = new Date(filters.startDate);
     const end = new Date(filters.endDate);
@@ -334,14 +310,6 @@ const LoggingComponent: React.FC = () => {
           >
             <Download className="w-4 h-4" />
             <span>Export</span>
-          </button>
-          
-          <button
-            onClick={cleanupLogs}
-            className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-          >
-            <Trash2 className="w-4 h-4" />
-            <span>Cleanup</span>
           </button>
         </div>
       </div>

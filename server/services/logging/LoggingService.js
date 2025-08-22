@@ -271,15 +271,18 @@ class LoggingService {
    */
   async cleanOldLogs(retentionDays = 30) {
     try {
+      // Only clean application logs, NOT audit logs
       const result = await this.pool.query(`
         DELETE FROM logs 
         WHERE timestamp < NOW() - INTERVAL '${retentionDays} days'
+        AND log_type = 'application'
       `);
 
       await this.applicationLogger.info(`Log cleanup completed`, {
         deletedRows: result.rowCount,
         retentionDays,
-        operation: 'log_cleanup'
+        operation: 'log_cleanup',
+        logType: 'application'
       });
 
       return result.rowCount;
