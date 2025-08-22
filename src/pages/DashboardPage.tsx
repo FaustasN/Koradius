@@ -1,11 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Settings, Image, MessageSquare, Clock, Plus, Edit, Trash2, Bell, Package, Database, Search, Star, Phone, Mail, Home, CheckCircle, Eye, EyeOff, ChevronUp, ChevronDown, BarChart3 } from 'lucide-react';
+import { LogOut, Settings, Image, MessageSquare, Clock, Plus, Edit, Trash2, Bell, Package, Database, Search, Star, Phone, Mail, Home, CheckCircle, Eye, EyeOff, ChevronUp, ChevronDown, BarChart3, Server, FileText } from 'lucide-react';
 import ImageUpload from '../components/ImageUpload';
 import GoogleAnalytics from '../components/GoogleAnalytics';
-import { notificationsAPI, contactsAPI, reviewsAPI } from '../services/adminApiService';
+import EnhancedServerMonitoring from '../components/EnhancedServerMonitoring';
+import LoggingComponent from '../components/LoggingComponent';
+import { notificationsAPI, contactsAPI, reviewsAPI, serverAPI } from '../services/adminApiService';
+import { galleryApi, travelPacketsApi } from '../services/apiService';
 import { useNotificationManager } from '../utils/notificationUtils';
+
+// API Base URL
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
 // Types for our data structures
 interface GalleryItem {
@@ -91,13 +97,37 @@ interface Message {
   created_at: string;
 }
 
+interface BackendHealthStatus {
+  backends: Array<{
+    id: string;
+    name: string;
+    url: string;
+    status: 'healthy' | 'unhealthy' | 'down' | 'unknown';
+    lastCheck: string | null;
+    lastSeen: string | null;
+    responseTime: number | null;
+    consecutiveFailures: number;
+    errorMessage: string | null;
+    downtime: number | null;
+  }>;
+  summary: {
+    total: number;
+    healthy: number;
+    unhealthy: number;
+    down: number;
+    unknown: number;
+  };
+  isMonitoring: boolean;
+  lastUpdate: string;
+}
+
 const DashboardPage = () => {
   const { logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const notificationManager = useNotificationManager();
   const [userInfo, setUserInfo] = useState<{ username: string; role: string; exp: number } | null>(null);
   const [timeUntilExpiry, setTimeUntilExpiry] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'gallery' | 'packets' | 'zinutes' | 'atsiliepimai' | 'analytics'>('gallery');
+  const [activeTab, setActiveTab] = useState<'gallery' | 'packets' | 'zinutes' | 'atsiliepimai' | 'notifications' | 'analytics' | 'server'>('gallery');
   const [isLoading, setIsLoading] = useState(false);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
 
@@ -165,8 +195,13 @@ const DashboardPage = () => {
 
   // Notifications state
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [dropdownNotifications, setDropdownNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationSortBy, setNotificationSortBy] = useState<'date' | 'priority' | 'type'>('date');
   const [hasNewNotifications, setHasNewNotifications] = useState(false);
+
+  // Backend health state
+  const [backendHealth, setBackendHealth] = useState<BackendHealthStatus | null>(null);
 
   // Item highlighting state for notification navigation
   const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
@@ -183,6 +218,104 @@ const DashboardPage = () => {
   useEffect(() => {
     localStorage.setItem('readContacts', JSON.stringify([...readContacts]));
   }, [readContacts]);
+
+  // Notification loading functions - placed here to avoid hoisting issues
+  const loadNotifications = async () => {
+    try {
+      const data = await notificationsAPI.getAll(notificationSortBy);
+      
+      // Transform API data to match our interface
+      const transformedData: Notification[] = data.map((item: any) => ({
+        id: item.id,
+        type: item.type,
+        title: item.title,
+        message: item.message,
+        timestamp: item.timestamp,
+        isRead: item.is_read,
+        priority: item.priority
+      }));
+      
+      // Check if we have new notifications
+      const currentUnreadIds = new Set(notifications.filter(n => !n.isRead).map(n => n.id));
+      const newUnreadNotifications = transformedData.filter(n => !n.isRead && !currentUnreadIds.has(n.id));
+      const newCount = transformedData.filter(n => !n.isRead).length;
+        
+        // Handle new notifications (only if we actually have new ones, not on initial load)
+        if (newUnreadNotifications.length > 0 && notifications.length > 0) {
+          setHasNewNotifications(true);
+          // Reset the indicator after 5 seconds
+          setTimeout(() => setHasNewNotifications(false), 5000);
+          
+          // Request permission and show browser notification if granted
+          try {
+            const hasPermission = await notificationManager.requestPermission();
+            if (hasPermission) {
+              const notificationTitle = `New ${newUnreadNotifications[0].type} notification`;
+              notificationManager.showBrowserNotification(
+                notificationTitle,
+                newUnreadNotifications[0].message,
+                newUnreadNotifications[0].priority
+              );
+            }
+          } catch {
+            // Silent failure
+          }
+        }      setNotifications(transformedData);
+      setUnreadCount(newCount);
+    } catch (error) {
+      console.error('Error loading notifications:', error);
+    }
+  };
+
+  // Separate function for dropdown notifications (always sorted by date)
+  const loadDropdownNotifications = async () => {
+    try {
+      const data = await notificationsAPI.getAll('date');
+      
+      // Transform API data to match our interface
+      const transformedData: Notification[] = data.map((item: any) => ({
+        id: item.id,
+        type: item.type,
+        title: item.title,
+        message: item.message,
+        timestamp: item.timestamp,
+        isRead: item.is_read,
+        priority: item.priority
+      }));
+      
+      // Update dropdown notifications state (separate from tab notifications)
+      setDropdownNotifications(transformedData);
+      
+      // Always update unread count
+      const newCount = transformedData.filter(n => !n.isRead).length;
+      setUnreadCount(newCount);
+      
+      // Check for new notifications for browser notifications
+      const currentUnreadIds = new Set(dropdownNotifications.filter(n => !n.isRead).map(n => n.id));
+      const newUnreadNotifications = transformedData.filter(n => !n.isRead && !currentUnreadIds.has(n.id));
+      
+      if (newUnreadNotifications.length > 0 && dropdownNotifications.length > 0) {
+        setHasNewNotifications(true);
+        setTimeout(() => setHasNewNotifications(false), 5000);
+        
+        try {
+          const hasPermission = await notificationManager.requestPermission();
+          if (hasPermission) {
+            const notificationTitle = `New ${newUnreadNotifications[0].type} notification`;
+            notificationManager.showBrowserNotification(
+              notificationTitle,
+              newUnreadNotifications[0].message,
+              newUnreadNotifications[0].priority
+            );
+          }
+        } catch {
+          // Silent failure
+        }
+      }
+    } catch (error) {
+      console.error('Error loading dropdown notifications:', error);
+    }
+  };
 
   useEffect(() => {
     // Get user info from JWT token
@@ -278,38 +411,47 @@ const DashboardPage = () => {
     }
   }, [isAuthenticated]); // Run when authentication state changes
 
-  // Set up real-time notification polling and auto-refresh
+  // Simple auto-refresh for notifications and backend health
   useEffect(() => {
     if (isAuthenticated) {
       // Poll for new notifications every 30 seconds
       const notificationInterval = setInterval(() => {
-        loadNotifications();
+        // Use appropriate loading function based on current tab
+        if (activeTab === 'notifications') {
+          loadNotifications();
+        } else {
+          loadDropdownNotifications();
+        }
       }, 30000); // 30 seconds
 
-      // Auto-refresh current tab data every 60 seconds
-      const dataRefreshInterval = setInterval(() => {
-        switch (activeTab) {
-          case 'gallery':
-            loadGalleryItems().catch(error => console.error('Error auto-refreshing gallery:', error));
-            break;
-          case 'packets':
-            loadTravelPackets().catch(error => console.error('Error auto-refreshing packets:', error));
-            break;
-          case 'zinutes':
-            loadContacts().catch(error => console.error('Error auto-refreshing contacts:', error));
-            break;
-          case 'atsiliepimai':
-            loadReviews().catch(error => console.error('Error auto-refreshing reviews:', error));
-            break;
-        }
-      }, 60000); // 60 seconds
+      // Auto-refresh backend health every 15 seconds
+      const healthInterval = setInterval(() => {
+        loadBackendHealth().catch(error => console.error('Error auto-refreshing backend health:', error));
+      }, 15000); // 15 seconds
 
       return () => {
         clearInterval(notificationInterval);
-        clearInterval(dataRefreshInterval);
+        clearInterval(healthInterval);
       };
     }
   }, [isAuthenticated, activeTab]);
+
+  // Reload notifications when sort order changes (only for notifications tab)
+  useEffect(() => {
+    if (isAuthenticated && activeTab === 'notifications') {
+      loadNotifications();
+    }
+  }, [notificationSortBy, isAuthenticated, activeTab]);
+
+  // Load notifications with current sort when switching to notifications tab
+  useEffect(() => {
+    if (isAuthenticated && activeTab === 'notifications') {
+      loadNotifications();
+    } else if (isAuthenticated && activeTab !== 'notifications') {
+      // Load dropdown notifications for other tabs
+      loadDropdownNotifications();
+    }
+  }, [activeTab, isAuthenticated]);
 
   // Close notifications dropdown when clicking outside
   useEffect(() => {
@@ -351,9 +493,10 @@ const DashboardPage = () => {
       await Promise.all([
         loadGalleryItems(),
         loadTravelPackets(),
-        loadNotifications(),
+        loadDropdownNotifications(), // Use dropdown notifications for initial load
         loadContacts(),
-        loadReviews()
+        loadReviews(),
+        loadBackendHealth()
       ]);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -365,28 +508,22 @@ const DashboardPage = () => {
   // API service functions
   const loadGalleryItems = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/gallery');
+      const data = await galleryApi.getAll();
       
-      if (response.ok) {
-        const data = await response.json();
-        
-        // Transform API data to match our interface
-        const transformedData: GalleryItem[] = data.map((item: any) => ({
-          id: item.id,
-          title: item.title,
-          location: item.location,
-          category: item.category,
-          imageUrl: item.image_url,
-          photographer: item.photographer,
-          date: item.date,
-          likes: item.likes,
-          isActive: item.is_active
-        }));
-        
-        setGalleryItems(transformedData);
-      } else {
-        throw new Error('Failed to fetch gallery items');
-      }
+      // Transform API data to match our interface
+      const transformedData: GalleryItem[] = data.map((item: any) => ({
+        id: item.id,
+        title: item.title,
+        location: item.location,
+        category: item.category,
+        imageUrl: item.image_url,
+        photographer: item.photographer,
+        date: item.date,
+        likes: item.likes,
+        isActive: item.is_active
+      }));
+      
+      setGalleryItems(transformedData);
     } catch (error) {
       console.error('Error loading gallery items:', error);
     }
@@ -394,85 +531,59 @@ const DashboardPage = () => {
 
   const loadTravelPackets = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/travel-packets');
+      const data = await travelPacketsApi.getAll();
       
-      if (response.ok) {
-        const data = await response.json();
-        
-        // Transform API data to match our interface
-        const transformedData: TravelPacket[] = data.map((item: any) => ({
-          id: item.id,
-          title: item.title,
-          location: item.location,
-          duration: item.duration,
-          price: parseFloat(item.price),
-          originalPrice: item.original_price ? parseFloat(item.original_price) : undefined,
-          rating: parseFloat(item.rating),
-          reviews: item.reviews,
-          imageUrl: item.image_url,
-          category: item.category,
-          badge: item.badge,
-          description: item.description,
-          includes: item.includes || [],
-          availableSpots: item.available_spots,
-          departure: item.departure,
-          isActive: item.is_active
-        }));
-        
-        setTravelPackets(transformedData);
-      } else {
-        throw new Error('Failed to fetch travel packets');
-      }
+      // Transform API data to match our interface
+      const transformedData: TravelPacket[] = data.map((item: any) => ({
+        id: item.id,
+        title: item.title,
+        location: item.location,
+        duration: item.duration,
+        price: parseFloat(item.price),
+        originalPrice: item.original_price ? parseFloat(item.original_price) : undefined,
+        rating: parseFloat(item.rating),
+        reviews: item.reviews,
+        imageUrl: item.image_url,
+        category: item.category,
+        badge: item.badge,
+        description: item.description,
+        includes: item.includes || [],
+        availableSpots: item.available_spots,
+        departure: item.departure,
+        isActive: item.is_active
+      }));
+      
+      setTravelPackets(transformedData);
     } catch (error) {
       console.error('Error loading travel packets:', error);
     }
   };
 
-  const loadNotifications = async () => {
+  const loadBackendHealth = async () => {
     try {
-      const data = await notificationsAPI.getAll();
-      
-      // Transform API data to match our interface
-      const transformedData: Notification[] = data.map((item: any) => ({
-        id: item.id,
-        type: item.type,
-        title: item.title,
-        message: item.message,
-        timestamp: item.timestamp,
-        isRead: item.is_read,
-        priority: item.priority
-      }));
-      
-      // Check if we have new notifications
-      const currentUnreadIds = new Set(notifications.filter(n => !n.isRead).map(n => n.id));
-      const newUnreadNotifications = transformedData.filter(n => !n.isRead && !currentUnreadIds.has(n.id));
-      const newCount = transformedData.filter(n => !n.isRead).length;
-        
-        // Handle new notifications (only if we actually have new ones, not on initial load)
-        if (newUnreadNotifications.length > 0 && notifications.length > 0) {
-          setHasNewNotifications(true);
-          // Reset the indicator after 5 seconds
-          setTimeout(() => setHasNewNotifications(false), 5000);
-          
-          // Request permission and show browser notification if granted
-          try {
-            const hasPermission = await notificationManager.requestPermission();
-            if (hasPermission) {
-              const notificationTitle = `New ${newUnreadNotifications[0].type} notification`;
-              notificationManager.showBrowserNotification(
-                notificationTitle,
-                newUnreadNotifications[0].message,
-                newUnreadNotifications[0].priority
-              );
-            }
-          } catch {
-            // Silent failure
-          }
-        }      setNotifications(transformedData);
-      setUnreadCount(newCount);
+      const data = await serverAPI.getBackendHealth();
+      setBackendHealth(data);
     } catch (error) {
-      console.error('Error loading notifications:', error);
+      console.error('Error loading backend health:', error);
+      // Set a default state if the API fails
+      setBackendHealth({
+        backends: [],
+        summary: {
+          total: 0,
+          healthy: 0,
+          unhealthy: 0,
+          down: 0,
+          unknown: 0
+        },
+        isMonitoring: false,
+        lastUpdate: new Date().toISOString()
+      });
     }
+  };
+
+  // Check if notification has actionable content (can navigate somewhere)
+  const hasNotificationAction = (notification: Notification) => {
+    return ['contact', 'review', 'order'].includes(notification.type);
   };
 
   // Handle notification clicks - navigate to relevant tab and mark as read
@@ -481,14 +592,17 @@ const DashboardPage = () => {
       // Mark notification as read
       await notificationsAPI.markAsRead(notification.id);
       
-      // Update local state
+      // Update both tab and dropdown notifications state
       setNotifications(prev => 
+        prev.map(n => n.id === notification.id ? { ...n, isRead: true } : n)
+      );
+      setDropdownNotifications(prev => 
         prev.map(n => n.id === notification.id ? { ...n, isRead: true } : n)
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
       
       // Navigate to appropriate tab based on notification type
-      let targetTab: 'gallery' | 'packets' | 'zinutes' | 'atsiliepimai' | 'analytics' | null = null;
+      let targetTab: 'gallery' | 'packets' | 'zinutes' | 'atsiliepimai' | 'notifications' | 'analytics' | null = null;
       
       switch (notification.type) {
         case 'contact':
@@ -539,6 +653,27 @@ const DashboardPage = () => {
       
     } catch (error) {
       console.error('Error handling notification click:', error);
+    }
+  };
+
+  const handleMarkAllNotificationsAsRead = async () => {
+    try {
+      await notificationsAPI.markAllAsRead();
+      
+      // Update both tab and dropdown notifications state
+      setNotifications(prev => 
+        prev.map(n => ({ ...n, isRead: true }))
+      );
+      setDropdownNotifications(prev => 
+        prev.map(n => ({ ...n, isRead: true }))
+      );
+      setUnreadCount(0);
+      
+      // Close notifications dropdown
+      setShowNotificationsDropdown(false);
+      
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
     }
   };
 
@@ -753,8 +888,8 @@ const DashboardPage = () => {
     try {
       const method = selectedGalleryItem ? 'PUT' : 'POST';
       const url = selectedGalleryItem 
-        ? `http://localhost:3001/api/gallery/${selectedGalleryItem.id}` 
-        : 'http://localhost:3001/api/gallery';
+        ? `${API_BASE_URL}/gallery/${selectedGalleryItem.id}` 
+        : `${API_BASE_URL}/gallery`;
       
       const response = await fetch(url, {
         method,
@@ -778,7 +913,7 @@ const DashboardPage = () => {
   const handleDeleteGalleryItem = async (id: number) => {
     if (window.confirm('Ar tikrai norite ištrinti šią nuotrauką?')) {
       try {
-        const response = await fetch(`http://localhost:3001/api/gallery/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/gallery/${id}`, {
           method: 'DELETE'
         });
 
@@ -849,8 +984,8 @@ const DashboardPage = () => {
       
       const method = selectedPacket ? 'PUT' : 'POST';
       const url = selectedPacket 
-        ? `http://localhost:3001/api/travel-packets/${selectedPacket.id}` 
-        : 'http://localhost:3001/api/travel-packets';
+        ? `${API_BASE_URL}/travel-packets/${selectedPacket.id}` 
+        : `${API_BASE_URL}/travel-packets`;
       
       const response = await fetch(url, {
         method,
@@ -874,7 +1009,7 @@ const DashboardPage = () => {
   const handleDeletePacket = async (id: number) => {
     if (window.confirm('Ar tikrai norite ištrinti šį kelionės paketą?')) {
       try {
-        const response = await fetch(`http://localhost:3001/api/travel-packets/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/travel-packets/${id}`, {
           method: 'DELETE'
         });
 
@@ -1040,26 +1175,42 @@ const DashboardPage = () => {
                 {showNotificationsDropdown && (
                   <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-96 overflow-y-auto">
                     <div className="p-4 border-b border-gray-200">
-                      <h3 className="text-lg font-semibold text-gray-900">Pranešimai</h3>
-                      {unreadCount > 0 && (
-                        <p className="text-sm text-gray-500">{unreadCount} neperskaityti</p>
-                      )}
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">Pranešimai</h3>
+                          {unreadCount > 0 && (
+                            <p className="text-sm text-gray-500">{unreadCount} neperskaityti</p>
+                          )}
+                        </div>
+                        {unreadCount > 0 && (
+                          <button
+                            onClick={handleMarkAllNotificationsAsRead}
+                            className="text-xs bg-teal-600 text-white px-3 py-1 rounded-lg hover:bg-teal-700 transition-colors duration-200"
+                          >
+                            Pažymėti viską
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <div className="max-h-80 overflow-y-auto">
-                      {notifications.length === 0 ? (
+                      {dropdownNotifications.length === 0 ? (
                         <div className="p-4 text-center text-gray-500">
                           <Bell className="h-8 w-8 mx-auto mb-2 text-gray-300" />
                           <p>Nėra pranešimų</p>
                         </div>
                       ) : (
                         <div className="divide-y divide-gray-100">
-                          {notifications.slice(0, 10).map((notification) => (
+                          {dropdownNotifications.slice(0, 10).map((notification) => (
                             <div
                               key={notification.id}
-                              className={`p-4 hover:bg-gray-50 transition-colors duration-200 cursor-pointer ${
+                              className={`p-4 transition-colors duration-200 ${
+                                hasNotificationAction(notification) 
+                                  ? 'hover:bg-gray-50 cursor-pointer' 
+                                  : 'cursor-default'
+                              } ${
                                 !notification.isRead ? 'bg-blue-50' : ''
                               }`}
-                              onClick={() => handleNotificationClick(notification)}
+                              onClick={() => hasNotificationAction(notification) && handleNotificationClick(notification)}
                             >
                               <div className="flex items-start space-x-3">
                                 <div className={`p-1 rounded-full ${getPriorityColor(notification.priority)}`}>
@@ -1157,12 +1308,43 @@ const DashboardPage = () => {
 
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
             <div className="flex items-center">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <Database className="h-6 w-6 text-orange-600" />
+              <div className={`p-2 rounded-lg ${
+                backendHealth 
+                  ? backendHealth.summary.down > 0 
+                    ? 'bg-red-100' 
+                    : backendHealth.summary.unhealthy > 0 
+                      ? 'bg-yellow-100' 
+                      : 'bg-green-100'
+                  : 'bg-gray-100'
+              }`}>
+                <Server className={`h-6 w-6 ${
+                  backendHealth 
+                    ? backendHealth.summary.down > 0 
+                      ? 'text-red-600' 
+                      : backendHealth.summary.unhealthy > 0 
+                        ? 'text-yellow-600' 
+                        : 'text-green-600'
+                    : 'text-gray-600'
+                }`} />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Duomenų bazė</p>
-                <p className="text-2xl font-bold text-gray-900">PostgreSQL</p>
+                <p className="text-sm font-medium text-gray-600">Backend status</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {backendHealth 
+                    ? `${backendHealth.summary.healthy}/${backendHealth.summary.total}`
+                    : '0/0'
+                  }
+                </p>
+                <p className="text-xs text-gray-500">
+                  {backendHealth 
+                    ? backendHealth.summary.down > 0 
+                      ? `${backendHealth.summary.down} down`
+                      : backendHealth.summary.unhealthy > 0 
+                        ? `${backendHealth.summary.unhealthy} unhealthy`
+                        : 'All healthy'
+                    : 'Loading...'
+                  }
+                </p>
               </div>
             </div>
           </div>
@@ -1229,6 +1411,24 @@ const DashboardPage = () => {
               </div>
             </button>
             <button
+              onClick={() => setActiveTab('notifications')}
+              className={`flex-1 px-6 py-4 text-sm font-medium transition-colors duration-200 ${
+                activeTab === 'notifications'
+                  ? 'text-teal-600 border-b-2 border-teal-600 bg-teal-50'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center justify-center space-x-2">
+                <Bell className="h-5 w-5" />
+                <span>Pranešimai</span>
+                {unreadCount > 0 && (
+                  <span className="bg-red-500 text-white text-xs rounded-full px-2 py-0.5 min-w-[20px] h-5 flex items-center justify-center">
+                    {unreadCount}
+                  </span>
+                )}
+              </div>
+            </button>
+            <button
               onClick={() => setActiveTab('analytics')}
               className={`flex-1 px-6 py-4 text-sm font-medium transition-colors duration-200 ${
                 activeTab === 'analytics'
@@ -1239,6 +1439,19 @@ const DashboardPage = () => {
               <div className="flex items-center justify-center space-x-2">
                 <BarChart3 className="h-5 w-5" />
                 <span>Analytics</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('server')}
+              className={`flex-1 px-6 py-4 text-sm font-medium transition-colors duration-200 ${
+                activeTab === 'server'
+                  ? 'text-purple-600 border-b-2 border-purple-600 bg-purple-50'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center justify-center space-x-2">
+                <Server className="h-5 w-5" />
+                <span>Server</span>
               </div>
             </button>
           </div>
@@ -1366,12 +1579,6 @@ const DashboardPage = () => {
                   <div>
                     <div className="flex justify-between items-center mb-6">
                       <h3 className="text-xl font-semibold text-gray-900">Kontaktai</h3>
-                      <button
-                        onClick={loadContacts}
-                        className="text-teal-600 hover:text-teal-800 text-sm font-medium"
-                      >
-                        Atnaujinti
-                      </button>
                     </div>
 
                     {/* Filter Controls for Contacts */}
@@ -1669,12 +1876,6 @@ const DashboardPage = () => {
                   <div>
                     <div className="flex justify-between items-center mb-6">
                       <h3 className="text-xl font-semibold text-gray-900">Atsiliepimai</h3>
-                      <button
-                        onClick={loadReviews}
-                        className="text-teal-600 hover:text-teal-800 text-sm font-medium"
-                      >
-                        Atnaujinti
-                      </button>
                     </div>
 
                     {/* Filter Controls for Reviews */}
@@ -1857,9 +2058,147 @@ const DashboardPage = () => {
                   </div>
                 )}
 
+                {/* Notifications Tab */}
+                {activeTab === 'notifications' && (
+                  <div>
+                    <div className="flex justify-between items-center mb-6">
+                      <h3 className="text-xl font-semibold text-gray-900">Pranešimai</h3>
+                      <div className="flex items-center space-x-4">
+                        <div className="flex items-center space-x-2">
+                          <label className="text-sm font-medium text-gray-700">Rūšiuoti pagal:</label>
+                          <select
+                            value={notificationSortBy}
+                            onChange={(e) => setNotificationSortBy(e.target.value as 'date' | 'priority' | 'type')}
+                            className="px-3 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+                          >
+                            <option value="date">Datą</option>
+                            <option value="priority">Prioritetą</option>
+                            <option value="type">Tipą</option>
+                          </select>
+                        </div>
+                        {unreadCount > 0 && (
+                          <button
+                            onClick={handleMarkAllNotificationsAsRead}
+                            className="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors duration-200 text-sm font-medium"
+                          >
+                            Pažymėti viską kaip perskaityta
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      {notifications.length === 0 ? (
+                        <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+                          <Bell className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                          <h4 className="text-lg font-medium text-gray-900 mb-2">Nėra pranešimų</h4>
+                          <p className="text-gray-500">Visi pranešimai bus rodomi čia</p>
+                        </div>
+                      ) : (
+                        <div className="grid gap-4">
+                          {notifications.map((notification) => (
+                            <div
+                              key={notification.id}
+                              className={`bg-white rounded-lg shadow-sm border-l-4 p-6 transition-all duration-200 hover:shadow-md ${
+                                !notification.isRead 
+                                  ? 'border-l-blue-500 bg-blue-50/30' 
+                                  : 'border-l-gray-200'
+                              } ${
+                                notification.priority === 'high' 
+                                  ? 'border-l-red-500' 
+                                  : notification.priority === 'medium'
+                                  ? 'border-l-orange-500'
+                                  : 'border-l-green-500'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start space-x-4 flex-1">
+                                  <div className={`p-2 rounded-full ${
+                                    notification.priority === 'high' 
+                                      ? 'bg-red-100 text-red-600' 
+                                      : notification.priority === 'medium'
+                                      ? 'bg-orange-100 text-orange-600'
+                                      : 'bg-green-100 text-green-600'
+                                  }`}>
+                                    {getTypeIcon(notification.type)}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center space-x-2 mb-2">
+                                      <h4 className="text-lg font-semibold text-gray-900">
+                                        {notification.title}
+                                      </h4>
+                                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                        notification.priority === 'high' 
+                                          ? 'bg-red-100 text-red-800' 
+                                          : notification.priority === 'medium'
+                                          ? 'bg-orange-100 text-orange-800'
+                                          : 'bg-green-100 text-green-800'
+                                      }`}>
+                                        {notification.priority === 'high' ? 'Aukštas' : 
+                                         notification.priority === 'medium' ? 'Vidutinis' : 'Žemas'} prioritetas
+                                      </span>
+                                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                        notification.type === 'contact' ? 'bg-blue-100 text-blue-800' :
+                                        notification.type === 'review' ? 'bg-purple-100 text-purple-800' :
+                                        notification.type === 'order' ? 'bg-green-100 text-green-800' :
+                                        'bg-gray-100 text-gray-800'
+                                      }`}>
+                                        {notification.type === 'contact' ? 'Kontaktas' :
+                                         notification.type === 'review' ? 'Atsiliepimas' :
+                                         notification.type === 'order' ? 'Užsakymas' : 'Sistema'}
+                                      </span>
+                                    </div>
+                                    <p className="text-gray-700 mb-3 leading-relaxed">
+                                      {notification.message}
+                                    </p>
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-sm text-gray-500">
+                                        {new Date(notification.timestamp).toLocaleString('lt-LT')}
+                                      </span>
+                                      {!notification.isRead && (
+                                        <span className="inline-flex items-center text-blue-600 text-sm font-medium">
+                                          <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+                                          Nauja
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center space-x-2 ml-4">
+                                  {!notification.isRead && (
+                                    <button
+                                      onClick={() => handleNotificationClick(notification)}
+                                      className="text-blue-600 hover:text-blue-800 text-sm font-medium px-3 py-1 rounded-lg border border-blue-200 hover:bg-blue-50 transition-colors duration-200"
+                                    >
+                                      Pažymėti perskaityta
+                                    </button>
+                                  )}
+                                  {hasNotificationAction(notification) && (
+                                    <button
+                                      onClick={() => handleNotificationClick(notification)}
+                                      className="text-teal-600 hover:text-teal-800 text-sm font-medium px-3 py-1 rounded-lg border border-teal-200 hover:bg-teal-50 transition-colors duration-200"
+                                    >
+                                      Peržiūrėti
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Analytics Tab */}
                 {activeTab === 'analytics' && (
                   <GoogleAnalytics />
+                )}
+
+                {/* Server Monitoring Tab */}
+                {activeTab === 'server' && (
+                  <EnhancedServerMonitoring />
                 )}
 
               </>

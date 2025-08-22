@@ -1,5 +1,5 @@
 // API service for Koradius backend
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
 // Get auth token from cookie
 const getAuthToken = (): string | null => {
@@ -63,8 +63,12 @@ export const authAPI = {
 
 // Notifications API
 export const notificationsAPI = {
-  getAll: async () => {
-    const response = await fetch(`${API_BASE_URL}/notifications`, {
+  getAll: async (sortBy?: 'date' | 'priority' | 'type') => {
+    const url = new URL(`${API_BASE_URL}/notifications`);
+    if (sortBy) {
+      url.searchParams.append('sortBy', sortBy);
+    }
+    const response = await fetch(url.toString(), {
       headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Failed to fetch notifications');
@@ -296,4 +300,206 @@ export const travelPacketsAPI = {
     if (!response.ok) throw new Error('Failed to delete travel packet');
     return response.json();
   },
+};
+
+// Server Monitoring API
+export const serverAPI = {
+  getServerStatus: async () => {
+    const response = await fetch(`${API_BASE_URL}/admin/server-status`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to fetch server status');
+    return response.json();
+  },
+
+  getLoadBalancerStatus: async () => {
+    const response = await fetch(`${API_BASE_URL}/admin/load-balancer-status`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to fetch load balancer status');
+    return response.json();
+  },
+
+  getQueueStats: async () => {
+    const response = await fetch(`${API_BASE_URL}/admin/queue-stats`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to fetch queue statistics');
+    return response.json();
+  },
+
+  getInstanceInfo: async () => {
+    const response = await fetch(`${API_BASE_URL}/admin/instance-info`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to fetch instance information');
+    return response.json();
+  },
+
+  getPublicHealth: async () => {
+    const response = await fetch(`${API_BASE_URL}/health`, {
+      method: 'GET',
+    });
+    if (!response.ok) throw new Error('Failed to fetch public health status');
+    return response.json();
+  },
+
+  // Queue management methods
+  retryFailedJobs: async (queueName: string) => {
+    const response = await fetch(`${API_BASE_URL}/admin/queue/${queueName}/retry-failed`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error(`Failed to retry failed jobs in ${queueName} queue`);
+    return response.json();
+  },
+
+  cleanQueue: async (queueName: string) => {
+    const response = await fetch(`${API_BASE_URL}/admin/queue/${queueName}/clean`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error(`Failed to clean ${queueName} queue`);
+    return response.json();
+  },
+
+  // Enhanced system monitoring
+  getSystemMetrics: async () => {
+    const response = await fetch(`${API_BASE_URL}/admin/system-metrics`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to fetch system metrics');
+    return response.json();
+  },
+
+  getSystemHistory: async (points = 60) => {
+    const response = await fetch(`${API_BASE_URL}/admin/system-history?points=${points}`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to fetch system history');
+    return response.json();
+  },
+
+  getServerStatusEnhanced: async () => {
+    const response = await fetch(`${API_BASE_URL}/admin/server-status-enhanced`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to fetch enhanced server status');
+    return response.json();
+  },
+
+  // Backend health monitoring methods
+  getBackendHealth: async () => {
+    const response = await fetch(`${API_BASE_URL}/admin/backend-health`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to fetch backend health status');
+    return response.json();
+  },
+
+  forceBackendHealthCheck: async () => {
+    const response = await fetch(`${API_BASE_URL}/admin/backend-health/force-check`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to force backend health check');
+    return response.json();
+  },
+
+  getLoadBalancerHealth: async () => {
+    const response = await fetch(`${API_BASE_URL}/admin/load-balancer-health`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to fetch load balancer health');
+    return response.json();
+  },
+
+  getCompleteServerStatus: async () => {
+    const response = await fetch(`${API_BASE_URL}/admin/server-status-complete`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to fetch complete server status');
+    return response.json();
+  },
+};
+
+// Logging API
+export const loggingAPI = {
+  getLogs: async (filters: any = {}) => {
+    const queryParams = new URLSearchParams();
+    
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        if (Array.isArray(value)) {
+          queryParams.append(key, value.join(','));
+        } else {
+          queryParams.append(key, String(value));
+        }
+      }
+    });
+
+    const response = await fetch(`${API_BASE_URL}/admin/logs?${queryParams}`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to fetch logs');
+    return response.json();
+  },
+
+  getLogStats: async (timeRange: string = '24h') => {
+    const response = await fetch(`${API_BASE_URL}/admin/logs/stats?timeRange=${timeRange}`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to fetch log statistics');
+    return response.json();
+  },
+
+  getUserAuditTrail: async (userId: number, startDate?: string, endDate?: string, limit: number = 100) => {
+    const queryParams = new URLSearchParams();
+    if (startDate) queryParams.append('startDate', startDate);
+    if (endDate) queryParams.append('endDate', endDate);
+    queryParams.append('limit', String(limit));
+
+    const response = await fetch(`${API_BASE_URL}/admin/logs/audit/${userId}?${queryParams}`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to fetch audit trail');
+    return response.json();
+  },
+
+  getComplianceReport: async (startDate?: string, endDate?: string, regulation?: string) => {
+    const queryParams = new URLSearchParams();
+    if (startDate) queryParams.append('startDate', startDate);
+    if (endDate) queryParams.append('endDate', endDate);
+    if (regulation) queryParams.append('regulation', regulation);
+
+    const response = await fetch(`${API_BASE_URL}/admin/logs/compliance?${queryParams}`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to generate compliance report');
+    return response.json();
+  },
+
+  cleanupLogs: async (retentionDays: number = 30) => {
+    const response = await fetch(`${API_BASE_URL}/admin/logs/cleanup`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ retentionDays }),
+    });
+    if (!response.ok) throw new Error('Failed to cleanup logs');
+    return response.json();
+  }
 };

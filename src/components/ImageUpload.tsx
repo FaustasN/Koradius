@@ -1,6 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { Upload, X } from 'lucide-react';
 
+// API Base URL
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+
 interface ImageUploadProps {
   value: string;
   onChange: (url: string) => void;
@@ -43,7 +46,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       const formData = new FormData();
       formData.append('image', file);
 
-      const response = await fetch(`http://localhost:3001/api/upload/${uploadType}`, {
+      const response = await fetch(`${API_BASE_URL}/upload/${uploadType}`, {
         method: 'POST',
         body: formData,
       });
