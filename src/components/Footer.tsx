@@ -10,14 +10,16 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Company Info */}
           <div className="lg:col-span-1">
-            <div className="flex items-center space-x-2 mb-6">
-              <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-lg">K</span>
-              </div>
+            <div className="flex items-center space-x-3 mb-6">
+              <img 
+                src="/Icon/Logo_Koradius_EN-max-300x228.png" 
+                alt="Koradius Travel Logo" 
+                className="h-12 w-auto"
+              />
               <span className="text-2xl font-bold">Koradius Travel</span>
             </div>
             <p className="text-gray-300 leading-relaxed mb-6">
-              Jau 15 metų kuriame nepamirštamus kelionių išgyvenimus lietuviams. 
+              Jau 7 metus kuriame nepamirštamus kelionių išgyvenimus lietuviams. 
               Mūsų misija - padėti jums atrasti pasaulio grožį saugiai ir patogiai.
             </p>
             
@@ -30,17 +32,12 @@ const Footer = () => {
                 <Facebook size={20} />
               </a>
               <a
-                href="#"
+                href="https://www.instagram.com/koradius_keliones"
                 className="bg-pink-600 hover:bg-pink-700 p-3 rounded-full transition-all duration-300 transform hover:scale-110 hover:shadow-lg btn-hover-smooth"
               >
                 <Instagram size={20} />
               </a>
-              <a
-                href="#"
-                className="bg-red-600 hover:bg-red-700 p-3 rounded-full transition-all duration-300 transform hover:scale-110 hover:shadow-lg btn-hover-smooth"
-              >
-                <Youtube size={20} />
-              </a>
+              
             </div>
           </div>
 
@@ -58,20 +55,13 @@ const Footer = () => {
               </li>
               <li>
                 <Link
-                  to="/tours"
+                  to="/search"
                   className="text-gray-300 hover:text-teal-400 transition-colors duration-300 text-left btn-hover-smooth block"
                 >
                   Kelionės
                 </Link>
               </li>
-              <li>
-                <Link
-                  to="/destinations"
-                  className="text-gray-300 hover:text-teal-400 transition-colors duration-300 text-left btn-hover-smooth block"
-                >
-                  Populiariausios kryptys
-                </Link>
-              </li>
+
               <li>
                 <Link
                   to="/gallery"
@@ -96,44 +86,23 @@ const Footer = () => {
                   Apie mus
                 </Link>
               </li>
+              <li>
+                <Link
+                  to="/contact"
+                  className="text-gray-300 hover:text-teal-400 transition-colors duration-300 text-left btn-hover-smooth block"
+                >
+                  Kontaktai
+                </Link>
+              </li>
             </ul>
           </div>
 
           {/* Services */}
           <div>
-            <h3 className="text-xl font-bold mb-6">Paslaugos</h3>
+            
             <ul className="space-y-3 text-gray-300">
               <li>
-                <Link
-                  to="/tours?category=weekend"
-                  className="hover:text-teal-400 transition-colors duration-300 cursor-pointer btn-hover-smooth block"
-                >
-                  Savaitgalio kelionės
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/tours?category=vacation"
-                  className="hover:text-teal-400 transition-colors duration-300 cursor-pointer btn-hover-smooth block"
-                >
-                  Poilsinės kelionės
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/tours?category=medical"
-                  className="hover:text-teal-400 transition-colors duration-300 cursor-pointer btn-hover-smooth block"
-                >
-                  Medicininis turizmas
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/destinations"
-                  className="hover:text-teal-400 transition-colors duration-300 cursor-pointer btn-hover-smooth block"
-                >
-                  Populiarios kryptys
-                </Link>
+              
               </li>
             </ul>
           </div>
