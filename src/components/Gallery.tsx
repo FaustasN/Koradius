@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, ChevronLeft, ChevronRight, MapPin, Camera } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, MapPin, Camera, Heart, Share2, Download } from 'lucide-react';
 import { galleryApi, transformGalleryItem } from '../services/apiService';
+import { useLanguage } from '../hooks/useLanguage';
 
 const Gallery = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [selectedImage, setSelectedImage] = useState<number | null>(null);
   const [activeFilter, setActiveFilter] = useState('all');
   
@@ -37,10 +39,10 @@ const Gallery = () => {
 
   // Fallback images data in case the API is not available
   const filters = [
-    { id: 'all', label: 'Visos nuotraukos', icon: Camera },
-    { id: 'beach', label: 'Paplūdimiai', icon: Camera },
-    { id: 'city', label: 'Miestai', icon: Camera },
-    { id: 'nature', label: 'Gamta', icon: Camera }
+    { id: 'all', label: t('gallery.filters.all'), icon: Camera },
+    { id: 'beach', label: t('gallery.filters.beach'), icon: Camera },
+    { id: 'city', label: t('gallery.filters.city'), icon: Camera },
+    { id: 'nature', label: t('gallery.filters.nature'), icon: Camera }
   ];
 
   const filteredImages = activeFilter === 'all' 
@@ -84,11 +86,11 @@ const Gallery = () => {
           <div className="flex items-center justify-center space-x-2 mb-4">
             <Camera className="text-teal-500" size={32} />
             <h2 className="text-4xl md:text-5xl font-bold text-gray-800">
-              Kelionių <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-500 to-teal-600">galerija</span>
+              {t('gallery.galleryPage.title.firstPart')} <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-500 to-teal-600">{t('gallery.galleryPage.title.secondPart')}</span>
             </h2>
           </div>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            Pažiūrėkite, kur jau apsilankė mūsų klientai ir įkvėpkitės savo kitai kelionei
+            {t('gallery.galleryPage.subtitle')}
           </p>
         </div>
 
@@ -117,7 +119,7 @@ const Gallery = () => {
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
-            <span className="ml-3 text-gray-600">Kraunamos nuotraukos...</span>
+            <span className="ml-3 text-gray-600">{t('gallery.galleryPage.loading')}</span>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Star, ChevronLeft, ChevronRight, Quote, Filter, Calendar, MapPin, ThumbsUp, ChevronDown, X, Send, CheckCircle } from 'lucide-react';
 import { sendFeedbackEmail } from '../services/emailService';
 import { reviewsAPI } from '../services/adminApiService';
+import { useLanguage } from '../hooks/useLanguage';
 
 interface Review {
   id: number;
@@ -16,7 +17,8 @@ interface Review {
 }
 
 const ReviewsPage = () => {
-
+  const navigate = useNavigate();
+  const { t } = useLanguage();
   const handleWriteReview = () => {
     setShowReviewForm(true);
     setShowReviewForm(true);
@@ -57,10 +59,10 @@ const ReviewsPage = () => {
   };
 
   const ratings = [
-    { id: 'all', label: 'Visi įvertinimai' },
-    { id: '5', label: '5 žvaigždutės' },
-    { id: '4', label: '4 žvaigždutės' },
-    { id: '3', label: '3 žvaigždutės' }
+    { id: 'all', label: t('reviews.ratings.all') },
+    { id: '5', label: t('reviews.ratings.fiveStars') },
+    { id: '4', label: t('reviews.ratings.fourStars') },
+    { id: '3', label: t('reviews.ratings.threeStars') }
   ];
 
   // Filter reviews based on rating only since we don't have category in the API response
@@ -117,22 +119,22 @@ const ReviewsPage = () => {
     
     // Validation checks
     if (!reviewForm.name.trim() || !reviewForm.email.trim() || !reviewForm.description.trim() || reviewForm.rating === 0) {
-      displayErrorNotification('Prašome užpildyti visus laukus ir pasirinkti įvertinimą');
+      displayErrorNotification(t('reviews.form.validation.fillAllFields'));
       return;
     }
 
     if (reviewForm.name.trim().length < 3) {
-      displayErrorNotification('Vardas turi būti bent 3 raidžių ilgio');
+      displayErrorNotification(t('reviews.form.validation.nameMinLength'));
       return;
     }
 
     if (!reviewForm.email.includes('@') || !reviewForm.email.includes('.')) {
-      displayErrorNotification('El. paštas turi turėti @ ir . simbolius');
+      displayErrorNotification(t('reviews.form.validation.emailInvalid'));
       return;
     }
 
     if (reviewForm.description.trim().length < 15) {
-      displayErrorNotification('Atsiliepimas turi būti bent 15 simbolių ilgio');
+      displayErrorNotification(t('reviews.form.validation.descriptionMinLength'));
       return;
     }
 
@@ -178,7 +180,7 @@ const ReviewsPage = () => {
       
     } catch (error) {
       console.error('Error submitting review:', error);
-      displayErrorNotification('Atsiprašome, įvyko klaida. Bandykite dar kartą.');
+      displayErrorNotification(t('home.featuredTours.bookingForm.validation.generalError'));
     } finally {
       setIsSubmitting(false);
     }
@@ -224,10 +226,10 @@ const ReviewsPage = () => {
               </div>
               <div className="flex-1">
                 <h3 className="text-lg font-bold text-gray-800 mb-1">
-                  Ačiū už atsiliepimą!
+                  {t('reviews.notifications.success')}
                 </h3>
                 <p className="text-gray-600 text-sm leading-relaxed">
-                  Jūsų atsiliepimas buvo sėkmingai išsiųstas ir bus peržiūrėtas. Jis padės kitiems keliautojams pasirinkti tinkamą kelionę.
+                  {t('reviews.notifications.successDescription')}
                 </p>
               </div>
               <button
@@ -258,7 +260,7 @@ const ReviewsPage = () => {
               </div>
               <div className="flex-1">
                 <h3 className="text-lg font-bold text-gray-800 mb-1">
-                  Klaida
+                  {t('reviews.notifications.error')}
                 </h3>
                 <p className="text-gray-600 text-sm leading-relaxed">
                   {errorMessage}
@@ -286,25 +288,25 @@ const ReviewsPage = () => {
           <div className="flex items-center justify-center space-x-2 mb-4">
             <Quote className="text-teal-500" size={32} />
             <h1 className="text-4xl md:text-5xl font-bold text-gray-800">
-              Klientų <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-500 to-teal-600">atsiliepimai</span>
+              {t('reviews.title.firstPart')} <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-500 to-teal-600">{t('reviews.title.secondPart')}</span>
             </h1>
           </div>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            Sužinokite, ką sako mūsų klientai apie keliones su Koradius Travel
+            {t('reviews.subtitle')}
           </p>
         </div>
 
         {/* Review Form Modal */}
         {showReviewForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden min-w-0 break-words" style={{ maxWidth: '42rem' }}>
               {/* Header */}
               <div className="flex items-center justify-between p-6 border-b border-gray-200">
                 <div className="flex items-center space-x-3">
                   <div className="bg-gradient-to-r from-teal-500 to-teal-600 p-3 rounded-full">
                     <Quote className="text-white" size={24} />
                   </div>
-                  <h2 className="text-2xl font-bold text-gray-800">Rašyti atsiliepimą</h2>
+                  <h2 className="text-2xl font-bold text-gray-800">{t('reviews.modalTitle')}</h2>
                 </div>
                 <button
                   onClick={handleFormClose}
@@ -314,145 +316,147 @@ const ReviewsPage = () => {
                 </button>
               </div>
 
-              {/* Form */}
-              <form onSubmit={handleFormSubmit} className="p-6 space-y-6">
-                {/* Name Input */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Jūsų vardas *
-                  </label>
-                  <input
-                    type="text"
-                    value={reviewForm.name}
-                    onChange={(e) => setReviewForm(prev => ({ ...prev, name: e.target.value }))}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200"
-                    placeholder="Įveskite savo vardą"
-                    required
-                  />
-                </div>
+              {/* Form with Scroll */}
+              <div className="overflow-y-auto max-h-[calc(90vh-120px)]">
+                <form onSubmit={handleFormSubmit} className="p-6 space-y-6 min-w-0 break-words">
+                  {/* Name Input */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('reviews.form.name')}
+                    </label>
+                    <input
+                      type="text"
+                      value={reviewForm.name}
+                      onChange={(e) => setReviewForm(prev => ({ ...prev, name: e.target.value }))}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200"
+                      placeholder={t('reviews.form.placeholders.name')}
+                      required
+                    />
+                  </div>
 
-                {/* Email Input */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    El. paštas *
-                  </label>
-                  <input
-                    type="email"
-                    value={reviewForm.email}
-                    onChange={(e) => setReviewForm(prev => ({ ...prev, email: e.target.value }))}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200"
-                    placeholder="Įveskite savo el. paštą"
-                    required
-                  />
-                </div>
+                  {/* Email Input */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('reviews.form.email')}
+                    </label>
+                    <input
+                      type="email"
+                      value={reviewForm.email}
+                      onChange={(e) => setReviewForm(prev => ({ ...prev, email: e.target.value }))}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200"
+                      placeholder={t('reviews.form.placeholders.email')}
+                      required
+                    />
+                  </div>
 
-                {/* Category Selection */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Kelionės tipas *
-                  </label>
-                  <select
-                    value={reviewForm.category}
-                    onChange={(e) => setReviewForm(prev => ({ ...prev, category: e.target.value }))}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200"
-                    required
-                  >
-                    <option value="vacation">Poilsinės kelionės</option>
-                    <option value="weekend">Savaitgalio kelionės</option>
-                    <option value="medical">Medicininis turizmas</option>
-                    <option value="nature">Gamtos kelionės</option>
-                  </select>
-                </div>
+                  {/* Category Selection */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('reviews.form.tripType')}
+                    </label>
+                    <select
+                      value={reviewForm.category}
+                      onChange={(e) => setReviewForm(prev => ({ ...prev, category: e.target.value }))}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200"
+                      required
+                    >
+                      <option value="vacation">{t('reviews.form.options.vacation')}</option>
+                      <option value="weekend">{t('reviews.form.options.weekend')}</option>
+                      <option value="medical">{t('reviews.form.options.medical')}</option>
+                      <option value="nature">{t('reviews.form.options.nature')}</option>
+                    </select>
+                  </div>
 
-                {/* Trip Reference Input (optional) */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Kelionės numeris (nebūtina)
-                  </label>
-                  <input
-                    type="text"
-                    value={reviewForm.tripReference}
-                    onChange={(e) => setReviewForm(prev => ({ ...prev, tripReference: e.target.value }))}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200"
-                    placeholder="Pvz.: KT2024-001"
-                  />
-                  <p className="text-sm text-gray-500 mt-1">
-                    Kelionės numeris padės mums geriau suprasti jūsų patirtį
-                  </p>
-                </div>
+                  {/* Trip Reference Input (optional) */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('reviews.form.tripNumber')}
+                    </label>
+                    <input
+                      type="text"
+                      value={reviewForm.tripReference}
+                      onChange={(e) => setReviewForm(prev => ({ ...prev, tripReference: e.target.value }))}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200"
+                      placeholder={t('reviews.form.placeholders.tripNumber')}
+                    />
+                    <p className="text-sm text-gray-500 mt-1">
+                      {t('reviews.form.helpers.tripNumber')}
+                    </p>
+                  </div>
 
-                {/* Rating Selection */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Įvertinimas *
-                  </label>
-                  <div className="flex items-center space-x-4">
-                    <div className="flex space-x-2">
-                      {renderRatingStars(reviewForm.rating, true, handleRatingChange)}
+                  {/* Rating Selection */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('reviews.form.rating')}
+                    </label>
+                    <div className="flex items-center space-x-4">
+                      <div className="flex space-x-2">
+                        {renderRatingStars(reviewForm.rating, true, handleRatingChange)}
+                      </div>
+                      <span className="text-lg font-semibold text-gray-600">
+                        {reviewForm.rating > 0 ? `${reviewForm.rating}/5` : t('reviews.form.selectRating')}
+                      </span>
                     </div>
-                    <span className="text-lg font-semibold text-gray-600">
-                      {reviewForm.rating > 0 ? `${reviewForm.rating}/5` : 'Pasirinkite įvertinimą'}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-500 mt-2">
-                    Kiek žvaigždžių suteiktumėte mūsų paslaugoms?
-                  </p>
-                </div>
-
-                {/* Description Input */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Jūsų atsiliepimas *
-                  </label>
-                  <textarea
-                    value={reviewForm.description}
-                    onChange={(e) => setReviewForm(prev => ({ ...prev, description: e.target.value }))}
-                    rows={6}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200 resize-none"
-                    placeholder="Pasidalinkite savo patirtimi, kaip praėjo kelionė, kas patiko, kas galėtų būti geriau..."
-                    required
-                  />
-                  <div className="flex justify-between items-center mt-2">
-                    <p className="text-sm text-gray-500">
-                      Minimalus ilgis: 15 simbolių
-                    </p>
-                    <p className={`text-sm font-medium ${
-                      reviewForm.description.length >= 15 ? 'text-green-600' : 'text-gray-500'
-                    }`}>
-                      {reviewForm.description.length}/15 simbolių
+                    <p className="text-sm text-gray-500 mt-2">
+                      {t('reviews.form.helpers.ratingQuestion')}
                     </p>
                   </div>
-                </div>
 
-                {/* Auto-generated Date Info */}
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <div className="flex items-center space-x-2 text-gray-600">
-                    <Calendar size={16} />
-                    <span className="text-sm">
-                      Atsiliepimo data bus automatiškai nustatyta: {new Date().toLocaleDateString('lt-LT')}
-                    </span>
+                  {/* Description Input */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('reviews.form.review')}
+                    </label>
+                    <textarea
+                      value={reviewForm.description}
+                      onChange={(e) => setReviewForm(prev => ({ ...prev, description: e.target.value }))}
+                      rows={6}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-200 resize-none break-words"
+                      placeholder={t('reviews.form.placeholders.review')}
+                      required
+                    />
+                    <div className="flex justify-between items-center mt-2">
+                      <p className="text-sm text-gray-500">
+                        {t('reviews.form.validation.minLength')}
+                      </p>
+                      <p className={`text-sm font-medium ${
+                        reviewForm.description.length >= 15 ? 'text-green-600' : 'text-gray-500'
+                      }`}>
+                        {reviewForm.description.length}/15 {t('reviews.form.validation.charCount')}
+                      </p>
+                    </div>
                   </div>
-                </div>
 
-                {/* Submit Button */}
-                <div className="flex space-x-4 pt-4">
-                  <button
-                    type="button"
-                    onClick={handleFormClose}
-                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-6 rounded-xl transition-all duration-200"
-                  >
-                    Atšaukti
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="flex-1 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 disabled:hover:scale-100 flex items-center justify-center space-x-2"
-                  >
-                    <Send size={20} />
-                    <span>{isSubmitting ? 'Siunčiama...' : 'Siųsti atsiliepimą'}</span>
-                  </button>
-                </div>
-              </form>
+                  {/* Auto-generated Date Info */}
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <div className="flex items-center space-x-2 text-gray-600">
+                      <Calendar size={16} />
+                      <span className="text-sm">
+                        {t('reviews.form.autoDate')} {new Date().toLocaleDateString('lt-LT')}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Submit Button */}
+                  <div className="flex space-x-4 pt-4">
+                    <button
+                      type="button"
+                      onClick={handleFormClose}
+                      className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-6 rounded-xl transition-all duration-200"
+                    >
+                      {t('reviews.form.buttons.cancel')}
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="flex-1 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 transform hover:scale-105 disabled:hover:scale-100 flex items-center justify-center space-x-2"
+                    >
+                      <Send size={20} />
+                      <span>{isSubmitting ? t('reviews.form.buttons.submitting') : t('reviews.form.buttons.submit')}</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
         )}
@@ -465,19 +469,19 @@ const ReviewsPage = () => {
               <div className="flex justify-center mb-2">
                 {renderStars(Math.round(averageRating))}
               </div>
-              <div className="text-gray-600">Vidutinis įvertinimas</div>
+              <div className="text-gray-600">{t('reviews.stats.averageRating')}</div>
             </div>
             <div className="text-center">
               <div className="text-5xl font-bold text-teal-600 mb-2">{totalReviews}</div>
-              <div className="text-gray-600">Atsiliepimų</div>
+              <div className="text-gray-600">{t('reviews.stats.totalReviews')}</div>
             </div>
             <div className="text-center">
               <div className="text-5xl font-bold text-teal-600 mb-2">98%</div>
-              <div className="text-gray-600">Rekomenduoja draugams</div>
+              <div className="text-gray-600">{t('reviews.stats.recommendFriends')}</div>
             </div>
             <div className="text-center">
               <div className="text-5xl font-bold text-teal-600 mb-2">85%</div>
-              <div className="text-gray-600">Grįžta pakartotinai</div>
+              <div className="text-gray-600">{t('reviews.stats.returnCustomers')}</div>
             </div>
           </div>
         </div>
@@ -486,7 +490,7 @@ const ReviewsPage = () => {
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
           <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">Įvertinimas</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-3">{t('reviews.filters.rating')}</label>
               <div className="flex flex-wrap gap-2">
                 {ratings.map((rating) => (
                   <button
@@ -509,7 +513,7 @@ const ReviewsPage = () => {
         {/* Featured Review Carousel */}
         {filteredReviews.length > 0 && (
           <div className="mb-16">
-            <h2 className="text-3xl font-bold text-gray-800 text-center mb-8">Išskirtiniai atsiliepimai</h2>
+                         <h2 className="text-3xl font-bold text-gray-800 text-center mb-8">{t('reviews.featuredReviews')}</h2>
             
             <div className="relative max-w-4xl mx-auto">
               <div className="bg-white rounded-3xl shadow-2xl p-8 md:p-12 relative overflow-hidden">
@@ -599,20 +603,20 @@ const ReviewsPage = () => {
 
         {/* All Reviews Grid */}
         <div className="mb-16">
-          <h2 className="text-3xl font-bold text-gray-800 text-center mb-8">
-            Visi atsiliepimai ({filteredReviews.length})
-          </h2>
+                     <h2 className="text-3xl font-bold text-gray-800 text-center mb-8">
+             {t('reviews.allReviews')} ({filteredReviews.length})
+           </h2>
           
           {filteredReviews.length === 0 ? (
             <div className="text-center py-12">
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Quote className="text-gray-400" size={32} />
               </div>
-              <h3 className="text-xl font-semibold text-gray-600 mb-2">Atsiliepimų nėra</h3>
+              <h3 className="text-xl font-semibold text-gray-600 mb-2">{t('reviews.noReviews.title')}</h3>
               <p className="text-gray-500">
                 {filterRating !== 'all' 
-                  ? 'Nėra atsiliepimų atitinkančių pasirinktą reitingą' 
-                  : 'Kol kas nėra patvirtintų atsiliepimų'}
+                  ? t('reviews.noReviews.noRatingFilter')
+                  : t('reviews.noReviews.noApprovedReviews')}
               </p>
             </div>
           ) : (
@@ -673,16 +677,16 @@ const ReviewsPage = () => {
         {/* Write Review CTA */}
         <div className="bg-gradient-to-r from-teal-500 to-teal-600 rounded-3xl p-12 text-white text-center">
           <Quote size={64} className="mx-auto mb-6 opacity-80" />
-          <h2 className="text-3xl font-bold mb-4">Pasidalinkite savo patirtimi</h2>
-          <p className="text-xl opacity-90 mb-8 max-w-2xl mx-auto">
-            Jūsų atsiliepimas padės kitiems keliautojams pasirinkti tinkamą kelionę
-          </p>
-          <button 
-            onClick={handleWriteReview}
-            className="bg-white hover:bg-gray-100 text-teal-600 font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg btn-hover-smooth"
-          >
-            Rašyti atsiliepimą
-          </button>
+                     <h2 className="text-3xl font-bold mb-4">{t('reviews.shareExperience.title')}</h2>
+           <p className="text-xl opacity-90 mb-8 max-w-2xl mx-auto">
+             {t('reviews.shareExperience.subtitle')}
+           </p>
+           <button 
+             onClick={handleWriteReview}
+             className="bg-white hover:bg-gray-100 text-teal-600 font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg btn-hover-smooth"
+           >
+             {t('reviews.shareExperience.button')}
+           </button>
         </div>
 
         {/* Trust Indicators */}
@@ -691,24 +695,24 @@ const ReviewsPage = () => {
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Star className="text-green-600" size={32} />
             </div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2">Patikimi atsiliepimai</h3>
-            <p className="text-gray-600">Visi atsiliepimai yra tikrinti ir patvirtinti</p>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">{t('reviews.trustIndicators.verifiedReviews.title')}</h3>
+            <p className="text-gray-600">{t('reviews.trustIndicators.verifiedReviews.description')}</p>
           </div>
           
           <div className="text-center p-6 bg-white rounded-2xl shadow-lg">
             <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Quote className="text-blue-600" size={32} />
             </div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2">Tikri klientai</h3>
-            <p className="text-gray-600">Tik tikrų klientų nuomonės ir patirtys</p>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">{t('reviews.trustIndicators.realCustomers.title')}</h3>
+            <p className="text-gray-600">{t('reviews.trustIndicators.realCustomers.description')}</p>
           </div>
           
           <div className="text-center p-6 bg-white rounded-2xl shadow-lg">
             <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <ThumbsUp className="text-purple-600" size={32} />
             </div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2">Aukštas įvertinimas</h3>
-            <p className="text-gray-600">98% klientų rekomenduoja mūsų paslaugas</p>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">{t('reviews.trustIndicators.highRating.title')}</h3>
+            <p className="text-gray-600">{t('reviews.trustIndicators.highRating.description')}</p>
           </div>
         </div>
       </div>

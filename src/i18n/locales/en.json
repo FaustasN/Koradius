@@ -1,0 +1,648 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "search": "Search",
+    "submit": "Submit",
+    "close": "Close"
+  },
+  "navigation": {
+    "home": "Home",
+    "about": "About",
+    "gallery": "Gallery",
+    "contact": "Contact",
+    "dashboard": "Dashboard",
+    "reviews": "Reviews",
+    "search": "Search",
+    "searchTours": "Search Tours"
+  },
+  "home": {
+    "hero": {
+      "title": "Discover Your Best Journey",
+      "subtitle": "We create unforgettable travel experiences for more than 7 years. Let us help you discover the beauty of the world.",
+      "cta": "Explore Tours"
+    },
+    "featured": {
+      "title": "Popular Tours",
+      "subtitle": "Our most popular routes"
+    },
+    "featuredTours": {
+      "title": "Popular Travel Packages",
+      "subtitle": "Discover the best travel offers and plan your dream journey with us",
+      "moreInfo": "More Info",
+      "bookNow": "Book Now",
+      "viewAllTours": "View All Travel Packages",
+      "bookNowButton": "Book Now",
+      "person": "per person",
+      "viewFullDescription": "View full journey description",
+      "description": "Description",
+      "aprašymas": "Description",
+      "duration": "Duration:",
+      "days": "days",
+      "perPerson": "per person",
+      "close": "Close",
+      "tourDuration": "Tour duration: {duration} days (according to package)",
+      "tourDurationText": "Tour duration:",
+      "accordingToPackage": "(according to package)",
+      "bookingForm": {
+        "title": "Tour Booking",
+        "fullName": "Full Name *",
+        "phoneNumber": "Phone Number *",
+        "emailAddress": "Email Address *",
+        "departureDate": "Departure Date *",
+        "numberOfPeople": "Number of People *",
+        "submitButton": "Confirm Booking",
+                 "minLetters": "Minimum letters: 3",
+         "minDigits": "Minimum digits: 6",
+         "validEmail": "Enter a valid email address",
+         "minPeople": "Min: 1 person",
+                  "validation": {
+           "fillAllFields": "Please fill in all fields",
+           "nameMinLength": "Name must be at least 3 letters",
+           "nameOnlyLetters": "Name can only contain letters and spaces",
+           "emailRequired": "Email address is required",
+           "emailInvalid": "Please enter a valid email address",
+           "phoneMinLength": "Phone number must be at least 6 digits",
+           "departureDateInvalid": "Departure date cannot be today or earlier",
+           "generalError": "Sorry, an error occurred. Please try again."
+         }
+       }
+     },
+            "paymentSection": {
+         "bookingConfirmed": "Booking Confirmed!",
+         "nowCanPay": "Now you can make the payment",
+         "orderInfo": "Order Information",
+         "tour": "Tour:",
+         "numberOfPeople": "Number of People:",
+         "totalAmount": "Total Amount:",
+         "paymentInfo": "Payment Information:",
+         "totalAmountLabel": "Total Amount:",
+         "fullName": "Full Name *",
+         "email": "Email *",
+         "submitbutton": "Pay with Paysera",
+         "paymentSelection": "Payment Selection",
+         "processing": "Processing...",
+         "submitting": "Submitting...",
+         "paymentUrlError": "Failed to get payment URL",
+         "payAmount": "Pay {amount} {currency}"
+       },
+    "whyChooseUs": {
+      "title": "Why Choose Us",
+      "subtitle": "7 years of experience and thousands of satisfied customers speak for us",
+      "features": {
+        "customerCare": {
+          "title": "Customer Care",
+          "description": "Every customer is important to us. We especially care about the comfort and needs of older people."
+        },
+        "reliability": {
+          "title": "Reliability",
+          "description": "7 years of experience, LTKIA membership and comprehensive insurance guarantee your safety."
+        },
+        "highQuality": {
+          "title": "High Quality",
+          "description": "Carefully selected partners and service providers ensure the highest quality."
+        },
+        "support24_7": {
+          "title": "24/7 Support",
+          "description": "We are available at any time during the trip. Emergency assistance line is always working."
+        },
+        "lithuanianTeam": {
+          "title": "Lithuanian Team",
+          "description": "All our specialists speak Lithuanian and understand Lithuanian culture and needs."
+        },
+        "wideNetwork": {
+          "title": "Wide Network",
+          "description": "Partners in 50+ countries allow us to offer the best offers and prices."
+        }
+      },
+      "trustIndicators": {
+        "yearsExperience": "Years of Experience",
+        "happyCustomers": "Happy Customers",
+        "customerSatisfaction": "Customer Satisfaction",
+        "countries": "Countries"
+      }
+    },
+    "stats": {
+      "tours": "Tours",
+      "countries": "Countries",
+      "happyCustomers": "Happy Customers",
+      "yearsExperience": "Years Experience"
+    },
+    "quickStats": {
+      "customerReturn": {
+        "label": "Customers Return Repeatedly",
+        "description": "Our customers choose us more than once"
+      },
+      "support24_7": {
+        "label": "Support During Travel",
+        "description": "We are always available for help"
+      },
+      "averageRating": {
+        "label": "Average Rating",
+        "description": "Based on customer reviews"
+      },
+      "customerSatisfaction": {
+        "label": "Customer Satisfaction",
+        "description": "Every year our customers leave reviews about our services"
+      }
+    }
+  },
+  "about": {
+    "title": "About Us",
+    "subtitle": "Your Trusted Travel Partner",
+    "description": "We passionately create unforgettable travel experiences. Our team of experts strives to make every journey special.",
+    "mission": "Our Mission",
+    "missionText": "To provide exceptional travel experiences that inspire and connect people with the most beautiful corners of the world.",
+    "vision": "Our Vision",
+    "visionText": "To be the leading travel company known for innovation, quality, and customer satisfaction.",
+    "hero": {
+      "title": {
+        "firstPart": "About",
+        "secondPart": "Us"
+      },
+      "subtitle": "For 7 years we have been creating unforgettable travel experiences for Lithuanians. Our mission is to help you discover the beauty of the world safely and comfortably."
+    },
+    "story": {
+      "title": "Our Story",
+      "paragraph1": "Koradius Travel was born from a passion for travel and a desire to help Lithuanians discover the beauty of the world. Founded in 2017 as a small travel agency, we dreamed of creating a service that would be tailored specifically to Lithuanian needs.",
+      "paragraph2": "Over 7 years, we have grown into a reliable travel partner specializing not only in regular holidays but also in medical tourism. We are particularly proud that our services are adapted for older people - we understand your needs and care about comfort at every step.",
+      "paragraph3": "Today we have sent more than 5000 Lithuanians on trips and continue to grow while maintaining a personal approach to each client. Our goal is not just to sell a trip, but to create an unforgettable experience."
+    },
+    "values": {
+      "title": "Our Values",
+      "customerCare": {
+        "title": "Customer Care",
+        "description": "Every customer is important to us. We strive to understand your needs and create the perfect journey, especially considering the needs of older people."
+      },
+      "reliability": {
+        "title": "Reliability",
+        "description": "7 years in the market have proven our reliability. We guarantee quality and safety in all trips. We have all the necessary certificates and insurance."
+      },
+      "experience": {
+        "title": "Experience",
+        "description": "We have a wide network of partners around the world and know the best offers. Our team regularly travels and checks service quality."
+      },
+      "support24_7": {
+        "title": "24/7 Support",
+        "description": "We are available at any time of day to help solve any questions during your trip. We have an emergency helpline."
+      }
+    },
+    "achievements": {
+      "title": "Our Achievements",
+      "yearsExperience": {
+        "number": "7+",
+        "label": "Years of Experience",
+        "description": "Since 2017"
+      },
+      "happyCustomers": {
+        "number": "5000+",
+        "label": "Happy Customers",
+        "description": "We serve about 1000 customers annually"
+      },
+      "countries": {
+        "number": "50+",
+        "label": "Countries",
+        "description": "On all continents"
+      },
+      "customerSatisfaction": {
+        "number": "98%",
+        "label": "Customer Satisfaction",
+        "description": "Based on reviews"
+      }
+    },
+    "certifications": {
+      "title": "Certificates and Memberships",
+      "ltkia": {
+        "title": "LTKIA Member",
+        "description": "Member of the Lithuanian Tourism and Travel Agencies Association since 2017"
+      },
+      "iata": {
+        "title": "IATA Agent",
+        "description": "Accredited agent of the International Air Transport Association"
+      },
+      "etoa": {
+        "title": "ETOA Member",
+        "description": "Member of the European Tour Operators Association"
+      }
+    },
+    "heroBadge": {
+      "yearsExperience": "Years of Experience"
+    },
+    "missionVision": {
+      "mission": {
+        "title": "Our Mission",
+        "description": "To create unforgettable travel experiences for every client, especially considering the needs of older people. To provide the highest quality services, ensuring safety, comfort and personal approach."
+      },
+      "vision": {
+        "title": "Our Vision",
+        "description": "To become the leading travel agency in Lithuania, known for exceptional customer service, reliability and innovative solutions. To help every Lithuanian discover the beauty of the world and create unforgettable memories."
+      }
+    },
+    "callToAction": {
+      "title": "Ready to start your journey with us?",
+      "contactButton": "Contact Us",
+      "viewToursButton": "View Tours"
+    }
+  },
+  "gallery": {
+    "title": "Photo Gallery",
+    "subtitle": "Capturing moments from around the world",
+    "filterAll": "All",
+    "filterDestinations": "Destinations",
+    "filterCulture": "Culture",
+    "filterNature": "Nature",
+    "galleryPage": {
+      "title": {
+        "firstPart": "Travel",
+        "secondPart": "Gallery"
+      },
+      "subtitle": "See where our clients have already visited and get inspired for your next trip",
+      "stats": {
+        "photos": "Photos",
+        "likes": "Likes"
+      },
+      "loading": "Loading photos...",
+      "error": "Failed to load gallery images. Please try again later.",
+      "retryButton": "Try again"
+    },
+    "filters": {
+      "all": "All Photos",
+      "beach": "Beaches",
+      "city": "Cities",
+      "nature": "Nature"
+    },
+    "uploadSection": {
+      "title": "Share Your Travel Photos",
+      "description": "Want your photos to appear in our gallery? Send them to",
+      "and": "and inspire other travelers!"
+    },
+    "photoContest": {
+      "title": {
+        "firstPart": "Monthly Photo",
+        "secondPart": "Contest"
+      },
+      "description": "Every month we select the best travel photo and reward the author!",
+      "firstPlace": {
+        "title": "1st Place",
+        "description": "Trip to chosen country",
+        "value": "€500 value"
+      },
+      "secondPlace": {
+        "title": "2nd Place",
+        "description": "Weekend trip",
+        "value": "€300 value"
+      },
+      "thirdPlace": {
+        "title": "3rd Place",
+        "description": "Travel voucher",
+        "value": "€150 value"
+      }
+    }
+  },
+  "reviews": {
+    "title": {
+      "firstPart": "Customer",
+      "secondPart": "Reviews"
+    },
+    "subtitle": "Find out what our customers say about trips with Koradius Travel",
+    "stats": {
+      "averageRating": "Average rating",
+      "totalReviews": "Reviews",
+      "recommendFriends": "Recommend to friends",
+      "returnCustomers": "Return customers"
+    },
+    "ratings": {
+      "all": "All Ratings",
+      "fiveStars": "5 Stars",
+      "fourStars": "4 Stars",
+      "threeStars": "3 Stars"
+    },
+    "filters": {
+      "rating": "Rating"
+    },
+    "noReviews": {
+      "title": "No Reviews",
+      "noRatingFilter": "No reviews match the selected rating",
+      "noApprovedReviews": "No approved reviews yet"
+    },
+    "trustIndicators": {
+      "verifiedReviews": {
+        "title": "Verified Reviews",
+        "description": "All reviews are checked and approved"
+      },
+      "realCustomers": {
+        "title": "Real Customers",
+        "description": "Only real customer opinions and experiences"
+      },
+      "highRating": {
+        "title": "High Rating",
+        "description": "98% of customers recommend our services"
+      }
+    },
+    "featuredReviews": "Featured Reviews",
+    "allReviews": "All Reviews",
+    "shareExperience": {
+      "title": "Share Your Experience",
+      "subtitle": "Your review will help other travelers choose the right trip",
+      "button": "Write a Review"
+    },
+    "form": {
+      "name": "Your Name *",
+      "email": "Email *",
+      "tripType": "Trip Type *",
+      "tripNumber": "Trip Number (optional)",
+      "rating": "Rating *",
+      "selectRating": "Select Rating",
+      "review": "Your Review *",
+      "placeholders": {
+        "name": "Enter your name",
+        "email": "Enter your email",
+        "tripNumber": "e.g. KT2024-001",
+        "review": "Share your experience, how the trip went, what you liked, what could be better..."
+      },
+      "helpers": {
+        "tripNumber": "Trip number will help us better understand your experience",
+        "ratingQuestion": "How many stars would you give our services?"
+      },
+      "validation": {
+        "minLength": "Minimum length: 15 characters",
+        "charCount": "characters",
+        "fillAllFields": "Please fill in all fields and select a rating",
+        "nameMinLength": "Name must be at least 3 characters long",
+        "emailInvalid": "Email must contain @ and . symbols",
+        "descriptionMinLength": "Review must be at least 15 characters long"
+      },
+      "autoDate": "Review date will be automatically set:",
+      "buttons": {
+        "cancel": "Cancel",
+        "submit": "Submit Review",
+        "submitting": "Submitting..."
+      },
+      "options": {
+        "vacation": "Leisure Trips",
+        "weekend": "Weekend Trips",
+        "medical": "Medical Tourism",
+        "nature": "Nature Trips"
+      }
+    },
+    "modalTitle": "Write a Review",
+    "notifications": {
+      "error": "Error",
+      "success": "Thank you for your review!",
+      "successDescription": "Your review has been successfully submitted and will be reviewed. It will help other travelers choose the right trip."
+    }
+  },
+  "contact": {
+    "title": "Contact Us",
+    "subtitle": "Get in touch with our team",
+    "hero": {
+      "title": {
+        "firstPart": "Contact",
+        "secondPart": "Us"
+      },
+      "subtitle": "Have questions about trips? Our team is ready to help you!"
+    },
+    "quickContact": {
+      "phone": {
+        "title": "Call Now",
+        "description": "Fastest way to get an answer",
+        "button": "+370 694 98078"
+      },
+      "email": {
+        "title": "Write Email",
+        "description": "We'll respond within 2-4 hours",
+        "button": "Write Email"
+      }
+    },
+    "form": {
+      "title": "Write to Us",
+      "name": {
+        "label": "Full Name *",
+        "placeholder": "Your full name"
+      },
+      "email": {
+        "label": "Email *",
+        "placeholder": "your@email.com"
+      },
+      "phone": {
+        "label": "Phone",
+        "placeholder": "37060012345"
+      },
+      "subject": {
+        "label": "Subject *",
+        "placeholder": "Choose a subject"
+      },
+      "preferredContact": {
+        "label": "Preferred Contact Method",
+        "email": "Email",
+        "phone": "Phone",
+        "both": "Both methods"
+      },
+      "urgency": {
+        "label": "Urgency",
+        "normal": "Normal",
+        "urgent": "Urgent",
+        "emergency": "Very urgent"
+      },
+      "message": {
+        "label": "Message *",
+        "placeholder": "Write your question or requirements...",
+        "minLength": "Minimum length: 3 characters, maximum: 70 characters",
+        "charCount": "characters"
+      },
+            "submit": {
+        "button": "Send Message",
+        "sending": "Sending..."
+      },
+      "subjects": [
+        "General Question",
+        "Tour Booking",
+        "Medical Tourism",
+        "Group Tour",
+        "Complaint or Suggestion",
+        "Technical Support",
+        "Partnership",
+        "Other"
+      ],
+      "validation": {
+        "fillAllFields": "Please fill in all required fields",
+        "nameMinLength": "Name must be at least 3 characters long",
+        "emailInvalid": "Email must contain @ and . symbols",
+        "phoneInvalid": "Phone number must be at least 6 digits and contain only numbers",
+        "messageMinLength": "Message must be at least 3 characters long",
+        "messageMaxLength": "Message cannot be longer than 70 characters",
+        "errorMessage": "Error"
+      }
+    },
+      "info": {
+      "address": "Address",
+      "phone": "Phone",
+      "email": "Email",
+      "workingHours": "Working Hours"
+    },
+    "contactInfo": {
+      "title": "Contact Information",
+      "address": {
+        "title": "Address",
+        "details": [
+          "Švitrigailos g. 11A-330",
+          "LT-03228 Vilnius",
+          "Lithuania"
+        ]
+      },
+      "phone": {
+        "title": "Phone",
+        "details": [
+          "+370 694 98078"
+        ]
+      },
+      "email": {
+        "title": "Email",
+        "details": [
+          "koradiustravel@gmail.com"
+        ]
+      },
+      "workingHours": {
+        "title": "Working Hours",
+        "details": [
+          "Mon-Fri: 9:00 - 18:00",
+          "Saturdays: 10:00 - 15:00",
+          "Sundays: Closed"
+        ]
+      },
+      "officeHours": {
+        "title": "Working Hours",
+        "days": {
+          "monday": "Monday",
+          "tuesday": "Tuesday",
+          "wednesday": "Wednesday",
+          "thursday": "Thursday",
+          "friday": "Friday",
+          "saturday": "Saturday",
+          "sunday": "Sunday"
+        },
+        "hours": {
+          "open": "9:00 - 18:00",
+          "limited": "10:00 - 15:00",
+          "closed": "Closed"
+        }
+      },
+      "location": {
+        "title": "Our Office",
+        "description": "Visit our office in the center of Vilnius"
+      },
+      "faq": {
+        "title": "Frequently Asked Questions",
+        "questions": {
+          "responseTime": {
+            "question": "How quickly do you respond to inquiries?",
+            "answer": "We respond to emails within 2-4 hours on business days. By phone - immediately."
+          },
+          "appointment": {
+            "question": "Can I come without a prior appointment?",
+            "answer": "Yes, but we recommend making an appointment in advance so we can allocate enough time."
+          },
+          "language": {
+            "question": "Do you provide consultations in Lithuanian?",
+            "answer": "Yes, all our specialists speak Lithuanian and understand the needs of older people."
+          },
+          "tripChanges": {
+            "question": "Can I change trip details?",
+            "answer": "Yes, depending on the type of trip and time. Contact us for details."
+          },
+          "payment": {
+            "question": "What payment options do you have?",
+            "answer": "We accept cash, cards, bank transfers and installment payments."
+          },
+          "insurance": {
+            "question": "Do you have insurance?",
+            "answer": "Yes, we have all the necessary insurance and are LTKIA members."
+          }
+        }
+      }
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome back",
+    "stats": "Statistics",
+    "recentTours": "Recent Tours",
+    "upcomingTours": "Upcoming Tours",
+    "revenue": "Revenue",
+    "bookings": "Bookings"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "username": "Username",
+    "password": "Password",
+    "forgotPassword": "Forgot Password?",
+    "rememberMe": "Remember Me"
+  },
+  "payment": {
+    "title": "Payment",
+    "amount": "Amount",
+    "currency": "Currency",
+    "cardNumber": "Card Number",
+    "expiryDate": "Expiry Date",
+    "cvv": "CVV",
+    "pay": "Pay Now",
+    "processing": "Processing Payment...",
+    "success": "Payment Successful!",
+    "cancelled": "Payment Cancelled",
+    "error": "Payment Error"
+  },
+  "footer": {
+    "description": "Your trusted partner for unforgettable travel experiences",
+    "quickLinks": "Quick Links",
+    "contactInfo": "Contact Information",
+    "followUs": "Follow Us",
+    "newsletter": "Newsletter",
+    "subscribe": "Subscribe",
+    "emailPlaceholder": "Enter your email",
+    "copyright": "© 2024 Koradius. All rights reserved.",
+    "companyInfo": {
+      "mission": "Your trusted travel partner, creating unforgettable travel experiences for 7 years."
+    },
+    "quickLinks": {
+      "title": "Quick Links",
+      "home": "Home",
+      "tours": "Tours",
+      "gallery": "Gallery",
+      "reviews": "Reviews",
+      "about": "About",
+      "contact": "Contact"
+    },
+    "contact": {
+      "title": "Contact",
+      "emergencyHelp": {
+        "title": "24/7 Help",
+        "description": "Emergency contact during travel:"
+      }
+    },
+    "bottomFooter": {
+      "copyright": "© 2025 Koradius Travel. All rights reserved.",
+      "privacyPolicy": "Privacy Policy",
+      "termsOfUse": "Terms of Use",
+      "cookies": "Cookies"
+    }
+  },
+  "searchPage": {
+    "loading": {
+      "title": "Loading search form...",
+      "subtitle": "Connecting to Novaturas system"
+    },
+    "error": {
+      "title": "Error loading search form",
+      "retryButton": "🔄 Try again"
+    }
+  }
+}

@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Globe, Search, Phone } from 'lucide-react';
+import { Menu, X, Search, Phone } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from './LanguageSwitcher';
+import { useLanguage } from '../hooks/useLanguage';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [currentLang, setCurrentLang] = useState('LT');
+  const { t } = useTranslation();
   const location = useLocation();
+  const { currentLanguage, changeLanguage } = useLanguage();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -15,8 +19,6 @@ const Header = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  const languages = ['LT', 'EN', 'RU'];
 
   const isActive = (path: string) => {
     return location.pathname === path;
@@ -51,7 +53,7 @@ const Header = () => {
                   : 'text-gray-700 hover:bg-teal-50 hover:text-teal-600'
               }`}
             >
-              Pradžia
+              {t('navigation.home')}
             </Link>
             <Link 
               to="/search"
@@ -61,7 +63,7 @@ const Header = () => {
                   : 'text-gray-700 hover:bg-teal-50 hover:text-teal-600'
               }`}
             >
-              Ieškoti kelionių
+              {t('navigation.searchTours')}
             </Link>
             <Link 
               to="/gallery"
@@ -71,7 +73,7 @@ const Header = () => {
                   : 'text-gray-700 hover:bg-teal-50 hover:text-teal-600'
               }`}
             >
-              Galerija
+              {t('navigation.gallery')}
             </Link>
             <Link 
               to="/reviews"
@@ -81,7 +83,7 @@ const Header = () => {
                   : 'text-gray-700 hover:bg-teal-50 hover:text-teal-600'
               }`}
             >
-              Atsiliepimai
+              {t('navigation.reviews')}
             </Link>
             <Link 
               to="/about"
@@ -91,7 +93,7 @@ const Header = () => {
                   : 'text-gray-700 hover:bg-teal-50 hover:text-teal-600'
               }`}
             >
-              Apie mus
+              {t('navigation.about')}
             </Link>
             <Link 
               to="/contact"
@@ -101,7 +103,7 @@ const Header = () => {
                   : 'text-gray-700 hover:bg-teal-50 hover:text-teal-600'
               }`}
             >
-              Kontaktai
+              {t('navigation.contact')}
             </Link>
           </nav>
 
@@ -118,30 +120,7 @@ const Header = () => {
 
 
             {/* Language Selector */}
-            <div className="relative group">
-              <button className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-all duration-300 btn-hover-smooth">
-                <Globe size={18} />
-                <span className="font-semibold">{currentLang}</span>
-              </button>
-              
-              <div className="absolute top-full right-0 mt-2 bg-white rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 border border-gray-100">
-                <div className="py-1">
-                  {languages.map((lang) => (
-                    <button
-                      key={lang}
-                      onClick={() => setCurrentLang(lang)}
-                      className={`block w-full text-left px-4 py-2 transition-colors duration-200 btn-hover-smooth ${
-                        currentLang === lang 
-                          ? 'bg-teal-50 text-teal-600 font-semibold' 
-                          : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      {lang}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <LanguageSwitcher />
 
             {/* Mobile menu button */}
             <button
@@ -159,16 +138,16 @@ const Header = () => {
         }`}>
           <nav className="bg-white rounded-xl shadow-xl p-4 space-y-2 border border-gray-100">
             <Link to="/" className="block py-3 px-4 text-gray-700 hover:bg-teal-50 hover:text-teal-600 rounded-lg transition-colors duration-200 font-medium btn-hover-smooth">
-              Pradžia
+              {t('navigation.home')}
             </Link>
             <Link to="/gallery" className="block py-3 px-4 text-gray-700 hover:bg-teal-50 hover:text-teal-600 rounded-lg transition-colors duration-200 font-medium btn-hover-smooth">
-              Galerija
+              {t('navigation.gallery')}
             </Link>
             <Link to="/reviews" className="block py-3 px-4 text-gray-700 hover:bg-teal-50 hover:text-teal-600 rounded-lg transition-colors duration-200 font-medium btn-hover-smooth">
-              Atsiliepimai
+              {t('navigation.reviews')}
             </Link>
             <Link to="/about" className="block py-3 px-4 text-gray-700 hover:bg-teal-50 hover:text-teal-600 rounded-lg transition-colors duration-200 font-medium btn-hover-smooth">
-              Apie mus
+              {t('navigation.about')}
             </Link>
             <Link 
               to="/search"
@@ -178,11 +157,31 @@ const Header = () => {
                   : 'text-gray-700 hover:bg-teal-50 hover:text-teal-600'
               }`}
             >
-              Ieškoti kelionių
+              {t('navigation.searchTours')}
             </Link>
             <Link to="/contact" className="block py-3 px-4 text-gray-700 hover:bg-teal-50 hover:text-teal-600 rounded-lg transition-colors duration-200 font-medium btn-hover-smooth">
-              Kontaktai
+              {t('navigation.contact')}
             </Link>
+            
+            {/* Mobile Language Switcher */}
+            <div className="pt-2 border-t border-gray-100">
+              <div className="px-4 py-2 text-sm font-medium text-gray-600 mb-2">Language / Kalba</div>
+              <div className="space-y-1">
+                {['lt', 'en', 'ru'].map((lang) => (
+                  <button
+                    key={lang}
+                    onClick={() => changeLanguage(lang)}
+                    className={`w-full text-left px-4 py-2 rounded-lg transition-colors duration-200 ${
+                      currentLanguage === lang 
+                        ? 'bg-teal-100 text-teal-700 font-medium' 
+                        : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {lang === 'lt' ? '🇱🇹 Lietuvių' : lang === 'en' ? '🇺🇸 English' : '🇷🇺 Русский'}
+                  </button>
+                ))}
+              </div>
+            </div>
           </nav>
         </div>
       </div>

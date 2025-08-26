@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Search, MapPin, Calendar, Users, Filter } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const Hero = () => {
+  const { t } = useTranslation();
   const [searchData, setSearchData] = useState({
     destination: '',
     date: '',
@@ -36,21 +38,12 @@ const Hero = () => {
             WebkitFontSmoothing: 'antialiased',
             MozOsxFontSmoothing: 'grayscale'
           }}>
-            Atrask savo
-            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-yellow-400 mt-2" style={{ 
-              fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-              textRendering: 'optimizeLegibility',
-              WebkitFontSmoothing: 'antialiased',
-              MozOsxFontSmoothing: 'grayscale'
-            }}>
-              geriausią kelionę
-            </span>
+            {t('home.hero.title')}
           </h1>
 
           {/* Subtitle */}
           <p className="text-xl md:text-2xl text-white/90 mb-16 leading-relaxed max-w-3xl mx-auto">
-            Sukuriame nepamirštamus kelionių išgyvenimus jau daugiau nei 7 metus. 
-            Leiskite mums padėti jums atrasti pasaulio grožį.
+            {t('home.hero.subtitle')}
           </p>
 
 
@@ -58,15 +51,15 @@ const Hero = () => {
           <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 text-white">
             <div className="text-center">
               <div className="text-4xl font-bold text-yellow-400 mb-2">7+</div>
-              <div className="text-lg">Metų patirtis</div>
+              <div className="text-lg">{t('home.stats.yearsExperience')}</div>
             </div>
             <div className="text-center">
               <div className="text-4xl font-bold text-yellow-400 mb-2">5000+</div>
-              <div className="text-lg">Laimingų klientų</div>
+              <div className="text-lg">{t('home.stats.happyCustomers')}</div>
             </div>
             <div className="text-center">
               <div className="text-4xl font-bold text-yellow-400 mb-2">50+</div>
-              <div className="text-lg">Šalių</div>
+              <div className="text-lg">{t('home.stats.countries')}</div>
             </div>
           </div>
         </div>

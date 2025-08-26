@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useLanguage } from '../hooks/useLanguage';
 // Simple Credit Card Icon component
 const CreditCardIcon = ({ className }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -27,6 +28,7 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
   variant = 'primary'
 }) => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [isLoading, setIsLoading] = useState(false);
 
   const sizeClasses = {
@@ -70,12 +72,12 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
       {isLoading ? (
         <>
           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-          Apdorojama...
+          {t('home.featuredTours.paymentSection.processing')}
         </>
       ) : (
         <>
           <CreditCardIcon className="h-5 w-5 mr-2" />
-          Mokėti {amount.toFixed(2)} {currency}
+          {t('home.featuredTours.paymentSection.payAmount').replace('{amount}', amount.toFixed(2)).replace('{currency}', currency)}
         </>
       )}
     </button>

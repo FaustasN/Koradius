@@ -3,9 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { MapPin, Clock, Star, ArrowRight, X, Calendar, Users, Phone, Mail, User, CreditCard, ChevronLeft, ChevronRight } from 'lucide-react';
 import { travelPacketsApi, transformTravelPacket, apiService } from '../services/apiService';
 import { notificationUtils } from '../utils/notificationUtils';
+import { useLanguage } from '../hooks/useLanguage';
 
 const FeaturedToursWithPayment = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   
   // Database state
   const [tours, setTours] = useState<any[]>([]);
@@ -106,7 +108,7 @@ const FeaturedToursWithPayment = () => {
     // Validate all fields
     if (!bookingForm.name.trim() || !bookingForm.phone.trim() || !bookingForm.email.trim() || 
         !bookingForm.departureDate || bookingForm.numberOfPeople < 1) {
-      alert('Prašome užpildyti visus laukus');
+      alert(t('home.featuredTours.bookingForm.validation.fillAllFields'));
       return;
     }
     
@@ -151,7 +153,7 @@ const FeaturedToursWithPayment = () => {
       
     } catch (error) {
       console.error('Error submitting booking:', error);
-      alert('Atsiprašome, įvyko klaida. Bandykite dar kartą.');
+      alert(t('home.featuredTours.bookingForm.validation.generalError'));
     } finally {
       setIsSubmitting(false);
     }
@@ -162,14 +164,14 @@ const FeaturedToursWithPayment = () => {
     const trimmedName = name.trim();
     
     if (trimmedName.length < 3) {
-      setNameError('Vardas turi būti bent 3 raidės');
+      setNameError(t('home.featuredTours.bookingForm.validation.nameMinLength'));
       return false;
     }
     
     // Check if name contains only letters, spaces, and Lithuanian characters
     const nameRegex = /^[a-zA-ZąčęėįšųūžĄČĘĖĮŠŲŪŽ\s]+$/;
     if (!nameRegex.test(trimmedName)) {
-      setNameError('Vardas gali turėti tik raides ir tarpus');
+      setNameError(t('home.featuredTours.bookingForm.validation.nameOnlyLetters'));
       return false;
     }
     
@@ -182,12 +184,12 @@ const FeaturedToursWithPayment = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     
     if (!email.trim()) {
-      setEmailError('El. pašto adresas yra būtinas');
+      setEmailError(t('home.featuredTours.bookingForm.validation.emailRequired'));
       return false;
     }
     
     if (!emailRegex.test(email.trim())) {
-      setEmailError('Įveskite teisingą el. pašto adresą');
+      setEmailError(t('home.featuredTours.bookingForm.validation.emailInvalid'));
       return false;
     }
     
@@ -200,7 +202,7 @@ const FeaturedToursWithPayment = () => {
     const digitsOnly = phone.replace(/\D/g, '');
     
     if (digitsOnly.length < 6) {
-      setPhoneError('Telefono numeris turi būti bent 6 skaitmenys');
+      setPhoneError(t('home.featuredTours.bookingForm.validation.phoneMinLength'));
       return false;
     }
     
@@ -222,7 +224,7 @@ const FeaturedToursWithPayment = () => {
     
     // Check departure date
     if (departure <= today) {
-      setDepartureDateError('Išvykimo data negali būti šiandien ar ankstesnė');
+      setDepartureDateError(t('home.featuredTours.bookingForm.validation.departureDateInvalid'));
       isValid = false;
     }
     
@@ -333,7 +335,7 @@ const FeaturedToursWithPayment = () => {
         // Redirect to Paysera
         window.location.href = response.paymentUrl;
       } else {
-        throw new Error('Nepavyko gauti mokėjimo URL');
+        throw new Error(t('home.featuredTours.paymentSection.paymentUrlError'));
       }
       
     } catch (error) {
@@ -385,10 +387,10 @@ const FeaturedToursWithPayment = () => {
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-4xl font-bold text-gray-800 mb-4">
-              Populiariausi kelionių paketai
+              {t('home.featuredTours.title')}
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Atraskite geriausius kelionių pasiūlymus ir planuokite savo svajonių kelionę su mumis
+              {t('home.featuredTours.subtitle')}
             </p>
           </div>
 
@@ -425,7 +427,7 @@ const FeaturedToursWithPayment = () => {
                   <div className="space-y-2 mb-4 flex-shrink-0">
                     <div className="flex items-center text-gray-600">
                       <Clock className="h-4 w-4 mr-2" />
-                      <span className="text-sm">{tour.duration} dienų</span>
+                      <span className="text-sm">{tour.duration} {t('home.featuredTours.days')}</span>
                     </div>
                   </div>
 
@@ -436,21 +438,21 @@ const FeaturedToursWithPayment = () => {
                         <span className="text-lg font-bold text-green-600">€{tour.price}</span>
                         <span className="text-sm text-gray-400 line-through">€{(tour.price * 1.2).toFixed(0)}</span>
                       </div>
-                      <span className="text-gray-500 text-xs"> / asmeniui</span>
+                      <span className="text-gray-500 text-xs">{ t('home.featuredTours.person')}</span>
                     </div>
                     <div className="flex space-x-2">
                       <button
                         onClick={() => handleMoreInfo(tour)}
-                        className="px-6 py-3 bg-white text-teal-600 border-2 border-teal-600 rounded-full font-bold hover:bg-teal-50 transition-colors flex items-center"
+                        className="px-4 py-2.5 bg-white text-teal-600 border-2 border-teal-600 rounded-full font-bold hover:bg-teal-50 transition-colors flex items-center text-sm"
                       >
-                        Plačiau
+                        {t('home.featuredTours.moreInfo')}
                       </button>
                       <button
                         onClick={() => handleBookNow(tour)}
-                        className="px-6 py-3 bg-teal-600 text-white rounded-full font-bold hover:bg-teal-700 transition-colors flex items-center"
+                        className="px-4 py-2.5 bg-teal-600 text-white rounded-full font-bold hover:bg-teal-700 transition-colors flex items-center text-sm"
                       >
                         <CreditCard className="h-4 w-4 mr-2" />
-                        Užsakyti
+                        {t('home.featuredTours.bookNow')}
                       </button>
                     </div>
                   </div>
@@ -502,7 +504,7 @@ const FeaturedToursWithPayment = () => {
                to="/search"
                className="inline-flex items-center px-8 py-3 bg-teal-600 text-white rounded-full font-bold hover:bg-teal-700 transition-colors"
              >
-               Peržiūrėti visus kelionių paketus
+               {t('home.featuredTours.viewAllTours')}
                <ArrowRight className="ml-2 h-5 w-5" />
              </Link>
            </div>
@@ -519,7 +521,7 @@ const FeaturedToursWithPayment = () => {
                   <h3 className="text-2xl font-bold text-gray-800">
                     {tourDetails.title}
                   </h3>
-                  <p className="text-gray-500 text-sm mt-1">Peržiūrėti pilną kelionės aprašymą</p>
+                  <p className="text-gray-500 text-sm mt-1">{t('home.featuredTours.viewFullDescription')}</p>
                 </div>
                 <button
                   onClick={() => setShowTourDetails(false)}
@@ -547,7 +549,7 @@ const FeaturedToursWithPayment = () => {
 
               {/* Tour Description */}
               <div className="mb-6">
-                <h4 className="text-lg font-semibold text-gray-800 mb-3">Aprašymas</h4>
+                <h4 className="text-lg font-semibold text-gray-800 mb-3">{t('home.featuredTours.aprašymas')}</h4>
                 <div className="bg-gray-50 rounded-lg p-4">
                   <p className="text-gray-700 leading-relaxed whitespace-pre-wrap break-words text-justify">
                     {tourDetails.description}
@@ -558,19 +560,19 @@ const FeaturedToursWithPayment = () => {
               {/* Tour Details Grid */}
               <div className="grid md:grid-cols-2 gap-6 mb-6">
                 <div className="space-y-4">
-                  <div className="flex items-center text-gray-600">
-                    <Clock className="h-5 w-5 mr-3 text-blue-500" />
-                    <div>
-                      <span className="font-medium">Trukmė:</span>
-                      <span className="ml-2">{tourDetails.duration} dienų</span>
+                                      <div className="flex items-center text-gray-600">
+                      <Clock className="h-5 w-5 mr-3 text-blue-500" />
+                      <div>
+                        <span className="font-medium">{t('home.featuredTours.duration')}</span>
+                        <span className="ml-2">{tourDetails.duration} {t('home.featuredTours.days')}</span>
+                      </div>
                     </div>
-                  </div>
                 </div>
                 <div className="space-y-4">
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                     <div className="text-center">
                       <div className="text-3xl font-bold text-green-600 mb-1">€{tourDetails.price}</div>
-                      <div className="text-sm text-green-700">/ asmeniui</div>
+                      <div className="text-sm text-green-700">/ {t('home.featuredTours.perPerson')}</div>
                       <div className="text-xs text-green-600 line-through mt-1">€{(tourDetails.price * 1.2).toFixed(0)}</div>
                     </div>
                   </div>
@@ -587,14 +589,14 @@ const FeaturedToursWithPayment = () => {
                   className="px-8 py-3 bg-teal-600 text-white rounded-full font-bold hover:bg-teal-700 transition-colors flex items-center"
                 >
                   <CreditCard className="h-5 w-5 mr-2" />
-                  Užsakyti dabar
+                  {t('home.featuredTours.bookNowButton')}
                 </button>
-                <button
-                  onClick={() => setShowTourDetails(false)}
-                  className="px-8 py-3 bg-white text-teal-600 border-2 border-teal-600 rounded-full font-bold hover:bg-teal-50 transition-colors"
-                >
-                  Uždaryti
-                </button>
+                                  <button
+                    onClick={() => setShowTourDetails(false)}
+                    className="px-8 py-3 bg-white text-teal-600 border-2 border-teal-600 rounded-full font-bold hover:bg-teal-50 transition-colors"
+                  >
+                    {t('home.featuredTours.close')}
+                  </button>
               </div>
             </div>
           </div>
@@ -608,7 +610,7 @@ const FeaturedToursWithPayment = () => {
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-2xl font-bold text-gray-800">
-                  {bookingConfirmed ? 'Mokėjimo pasirinkimas' : 'Kelionės užsakymas'}
+               
                 </h3>
                 <button
                   onClick={handleFormClose}
@@ -624,7 +626,7 @@ const FeaturedToursWithPayment = () => {
                   <div className="grid md:grid-cols-2 gap-4">
                                          <div>
                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                         Vardas ir pavardė *
+                         {t('home.featuredTours.bookingForm.fullName')}
                        </label>
                        <input
                          type="text"
@@ -640,12 +642,12 @@ const FeaturedToursWithPayment = () => {
                          <p className="mt-1 text-sm text-red-600">{nameError}</p>
                        )}
                        <p className="mt-1 text-xs text-gray-500">
-                         Minimalus raidžių skaičius: 3
+                         {t('home.featuredTours.bookingForm.minLetters')}
                        </p>
                      </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Telefono numeris *
+                        {t('home.featuredTours.bookingForm.phoneNumber')}
                       </label>
                       <input
                         type="tel"
@@ -661,14 +663,14 @@ const FeaturedToursWithPayment = () => {
                         <p className="mt-1 text-sm text-red-600">{phoneError}</p>
                       )}
                       <p className="mt-1 text-xs text-gray-500">
-                        Minimalus skaitmenų skaičius: 6
+                        {t('home.featuredTours.bookingForm.minDigits')}
                       </p>
                     </div>
                   </div>
 
                                      <div>
                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                       El. pašto adresas *
+                       {t('home.featuredTours.bookingForm.emailAddress')}
                      </label>
                      <input
                        type="email"
@@ -684,13 +686,13 @@ const FeaturedToursWithPayment = () => {
                        <p className="mt-1 text-sm text-red-600">{emailError}</p>
                      )}
                      <p className="mt-1 text-xs text-gray-500">
-                       Įveskite teisingą el. pašto adresą
+                       {t('home.featuredTours.bookingForm.validEmail')}
                      </p>
                    </div>
 
                                                                                                                    <div className="w-1/2">
                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                         Išvykimo data *
+                         {t('home.featuredTours.bookingForm.departureDate')}
                        </label>
                        <input
                          type="date"
@@ -718,14 +720,14 @@ const FeaturedToursWithPayment = () => {
                      {selectedTour?.duration && (
                        <div>
                          <p className="mt-1 text-xs text-gray-500">
-                           Kelionės trukmė: {selectedTour.duration} dienų (pagal paketą)
+                           {t('home.featuredTours.tourDurationText')} {selectedTour.duration} {t('home.featuredTours.days')} {t('home.featuredTours.accordingToPackage')}
                          </p>
                        </div>
                      )}
 
                                      <div>
                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                       Žmonių skaičius *
+                       {t('home.featuredTours.bookingForm.numberOfPeople')}
                      </label>
                      <input
                        type="number"
@@ -742,7 +744,7 @@ const FeaturedToursWithPayment = () => {
                        required
                      />
                      <p className="mt-1 text-xs text-gray-500">
-                       Min: 1 asmuo
+                       {t('home.featuredTours.bookingForm.minPeople')}
                      </p>
                    </div>
 
@@ -751,7 +753,7 @@ const FeaturedToursWithPayment = () => {
                      disabled={isSubmitting}
                      className="w-full py-3 bg-teal-600 text-white rounded-full font-bold hover:bg-teal-700 transition-colors disabled:opacity-50"
                    >
-                     {isSubmitting ? 'Siunčiama...' : 'Patvirtinti užsakymą'}
+                     {isSubmitting ? t('home.featuredTours.paymentSection.submitting') : t('home.featuredTours.bookingForm.submitButton')}
                    </button>
                 </form>
               ) : (
@@ -763,40 +765,40 @@ const FeaturedToursWithPayment = () => {
                         <CheckIcon className="h-5 w-5 text-white" />
                       </div>
                       <div>
-                        <h4 className="font-semibold text-green-800">Užsakymas patvirtintas!</h4>
-                        <p className="text-green-700 text-sm">Dabar galite atlikti mokėjimą</p>
+                        <h4 className="font-semibold text-green-800">{t('home.paymentSection.bookingConfirmed')}</h4>
+                        <p className="text-green-700 text-sm">{t('home.paymentSection.nowCanPay')}</p>
                       </div>
                     </div>
                   </div>
 
                   <div className="bg-gray-50 rounded-lg p-4">
-                    <h4 className="font-semibold text-gray-800 mb-3">Užsakymo informacija</h4>
+                    <h4 className="font-semibold text-gray-800 mb-3">{t('home.paymentSection.orderInfo')}</h4>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Kelionė:</span>
+                        <span className="text-gray-600">{t('home.paymentSection.tour')}</span>
                         <span className="font-medium">{selectedTour?.title}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Žmonių skaičius:</span>
+                        <span className="text-gray-600">{t('home.paymentSection.numberOfPeople')}</span>
                         <span className="font-medium">{bookingForm.numberOfPeople}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Bendra suma:</span>
+                        <span className="text-gray-600">{t('home.paymentSection.totalAmount')}</span>
                                                  <span className="font-bold text-lg text-green-600">
                            €{calculateTotalPrice().toFixed(2)}
-                         </span>
+                         </span>  
                       </div>
                     </div>
                   </div>
 
                   <div className="space-y-4">
-                    <h4 className="font-semibold text-gray-800">Mokėjimo informacija:</h4>
+                    <h4 className="font-semibold text-gray-800">{t('home.paymentSection.paymentInfo')}</h4>
                     
                     {/* Payment Form */}
                     <form onSubmit={handlePaymentSubmit} className="space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Vardas ir pavardė *
+                          {t('home.paymentSection.fullName')}
                         </label>
                         <input
                           type="text"
@@ -809,7 +811,7 @@ const FeaturedToursWithPayment = () => {
                       
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          El. paštas *
+                          {t('home.paymentSection.email')}
                         </label>
                         <input
                           type="email"
@@ -822,7 +824,7 @@ const FeaturedToursWithPayment = () => {
 
                                              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                          <div className="flex justify-between items-center">
-                           <span className="text-green-800 font-medium">Bendra suma:</span>
+                           <span className="text-green-800 font-medium">{t('home.paymentSection.totalAmountLabel')}</span>
                                                      <span className="text-2xl font-bold text-green-600">
                              €{calculateTotalPrice().toFixed(2)}
                            </span>
@@ -837,12 +839,12 @@ const FeaturedToursWithPayment = () => {
                         {isProcessingPayment ? (
                           <>
                             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                            Apdorojama...
+                            {t('home.featuredTours.paymentSection.processing')}
                           </>
                         ) : (
                           <>
                             <CreditCard className="h-5 w-5 mr-2" />
-                            Mokėti Paysera
+                            {t('home.paymentSection.submitbutton')}
                           </>
                         )}
                       </button>

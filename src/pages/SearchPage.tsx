@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useLanguage } from '../hooks/useLanguage';
 
 declare global {
   interface Window {
@@ -14,6 +15,7 @@ declare global {
 }
 
 const SearchPage = () => {
+  const { t } = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
   const [reloadKey, setReloadKey] = useState(Date.now());
   const [isLoading, setIsLoading] = useState(true);
@@ -158,8 +160,8 @@ const SearchPage = () => {
         }}>
           <div style={{ textAlign: 'center', padding: '24px' }}>
             <div className="loading-spinner" />
-            <p style={{ color: '#64748b', fontSize: '16px', fontWeight: '500' }}>Kraunama paieškos forma...</p>
-            <p style={{ color: '#94a3b8', fontSize: '14px' }}>Jungiamasi prie Novaturas sistemos</p>
+            <p style={{ color: '#64748b', fontSize: '16px', fontWeight: '500' }}>{t('searchPage.loading.title')}</p>
+            <p style={{ color: '#94a3b8', fontSize: '14px' }}>{t('searchPage.loading.subtitle')}</p>
           </div>
         </div>
       )}
@@ -176,14 +178,14 @@ const SearchPage = () => {
             maxWidth: '400px', margin: '0 16px'
           }}>
             <div style={{ fontSize: '64px', marginBottom: '16px' }}>⚠️</div>
-            <h3 style={{ color: '#dc2626', fontSize: '18px', fontWeight: '600' }}>Klaida įkeliant paieškos formą</h3>
+            <h3 style={{ color: '#dc2626', fontSize: '18px', fontWeight: '600' }}>{t('searchPage.error.title')}</h3>
             <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '24px' }}>{error}</p>
             <button onClick={handleRetry} style={{
               padding: '12px 24px', backgroundColor: '#3b82f6',
               color: 'white', border: 'none', borderRadius: '8px',
               cursor: 'pointer', fontSize: '14px', fontWeight: '500'
             }}>
-              🔄 Bandyti iš naujo
+              {t('searchPage.error.retryButton')}
             </button>
           </div>
         </div>

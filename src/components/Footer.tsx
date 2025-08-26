@@ -1,8 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Phone, Mail, Facebook, Instagram, Youtube, Heart } from 'lucide-react';
+import { useLanguage } from '../hooks/useLanguage';
 
 const Footer = () => {
+  const { t } = useLanguage();
+  
   return (
     <footer className="bg-gray-900 text-white">
       {/* Main Footer */}
@@ -19,8 +22,7 @@ const Footer = () => {
               <span className="text-2xl font-bold">Koradius Travel</span>
             </div>
             <p className="text-gray-300 leading-relaxed mb-6">
-              Jau 7 metus kuriame nepamirštamus kelionių išgyvenimus lietuviams. 
-              Mūsų misija - padėti jums atrasti pasaulio grožį saugiai ir patogiai.
+              {t('footer.companyInfo.mission')}
             </p>
             
             {/* Social Media */}
@@ -43,14 +45,14 @@ const Footer = () => {
 
           {/* Quick Links */}
           <div>
-            <h3 className="text-xl font-bold mb-6">Greitos nuorodos</h3>
+            <h3 className="text-xl font-bold mb-6">{t('footer.quickLinks.title')}</h3>
             <ul className="space-y-3">
               <li>
                 <Link
                   to="/"
                   className="text-gray-300 hover:text-teal-400 transition-colors duration-300 text-left btn-hover-smooth block"
                 >
-                  Pradžia
+                  {t('footer.quickLinks.home')}
                 </Link>
               </li>
               <li>
@@ -58,7 +60,7 @@ const Footer = () => {
                   to="/search"
                   className="text-gray-300 hover:text-teal-400 transition-colors duration-300 text-left btn-hover-smooth block"
                 >
-                  Kelionės
+                  {t('footer.quickLinks.tours')}
                 </Link>
               </li>
 
@@ -67,7 +69,7 @@ const Footer = () => {
                   to="/gallery"
                   className="text-gray-300 hover:text-teal-400 transition-colors duration-300 text-left btn-hover-smooth block"
                 >
-                  Galerija
+                  {t('footer.quickLinks.gallery')}
                 </Link>
               </li>
               <li>
@@ -75,7 +77,7 @@ const Footer = () => {
                   to="/reviews"
                   className="text-gray-300 hover:text-teal-400 transition-colors duration-300 text-left btn-hover-smooth block"
                 >
-                  Atsiliepimai
+                  {t('footer.quickLinks.reviews')}
                 </Link>
               </li>
               <li>
@@ -83,7 +85,7 @@ const Footer = () => {
                   to="/about"
                   className="text-gray-300 hover:text-teal-400 transition-colors duration-300 text-left btn-hover-smooth block"
                 >
-                  Apie mus
+                  {t('footer.quickLinks.about')}
                 </Link>
               </li>
               <li>
@@ -91,7 +93,7 @@ const Footer = () => {
                   to="/contact"
                   className="text-gray-300 hover:text-teal-400 transition-colors duration-300 text-left btn-hover-smooth block"
                 >
-                  Kontaktai
+                  {t('footer.quickLinks.contact')}
                 </Link>
               </li>
             </ul>
@@ -109,7 +111,7 @@ const Footer = () => {
 
           {/* Contact Info */}
           <div>
-            <h3 className="text-xl font-bold mb-6">Kontaktai</h3>
+            <h3 className="text-xl font-bold mb-6">{t('footer.contact.title')}</h3>
             <div className="space-y-4">
               <div className="flex items-start space-x-3">
                 <MapPin className="text-teal-400 flex-shrink-0 mt-1" size={18} />
@@ -136,8 +138,8 @@ const Footer = () => {
 
             {/* Emergency Contact */}
             <div className="mt-6 p-4 bg-red-900/30 rounded-lg border border-red-700/50">
-              <h4 className="font-bold text-red-300 mb-2">24/7 Pagalba</h4>
-              <p className="text-red-200 text-sm">Skubus ryšys kelionės metu:</p>
+              <h4 className="font-bold text-red-300 mb-2">{t('footer.contact.emergencyHelp.title')}</h4>
+              <p className="text-red-200 text-sm">{t('footer.contact.emergencyHelp.description')}</p>
               <p className="text-red-100 font-bold">+370 694 98078</p>
             </div>
           </div>
@@ -149,18 +151,18 @@ const Footer = () => {
         <div className="container mx-auto px-4 py-6">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <div className="text-gray-400 text-sm">
-              © 2025 Koradius Travel. Visos teisės saugomos.
+              {t('footer.bottomFooter.copyright')}
             </div>
             
             <div className="flex space-x-6 text-sm">
               <a href="#" className="text-gray-400 hover:text-teal-400 transition-colors duration-300 btn-hover-smooth">
-                Privatumo politika
+                {t('footer.bottomFooter.privacyPolicy')}
               </a>
               <a href="#" className="text-gray-400 hover:text-teal-400 transition-colors duration-300 btn-hover-smooth">
-                Naudojimo taisyklės
+                {t('footer.bottomFooter.termsOfUse')}
               </a>
               <a href="#" className="text-gray-400 hover:text-teal-400 transition-colors duration-300 btn-hover-smooth">
-                Slapukai
+                {t('footer.bottomFooter.cookies')}
               </a>
             </div>
           </div>

@@ -4,8 +4,10 @@ import StaggeredAnimation from '../components/StaggeredAnimation';
 import FadeInAnimation from '../components/FadeInAnimation';
 import { contactsAPI } from '../services/adminApiService';
 import { sendContactEmail } from '../services/emailService';
+import { useLanguage } from '../hooks/useLanguage';
 
 const ContactPage = () => {
+  const { t } = useLanguage();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -42,32 +44,32 @@ const ContactPage = () => {
     
     // Validation checks
     if (!formData.name.trim() || !formData.email.trim() || !formData.subject || !formData.message.trim()) {
-      displayErrorNotification('Prašome užpildyti visus privalomus laukus');
+      displayErrorNotification(t('contact.form.validation.fillAllFields'));
       return;
     }
 
     if (formData.name.trim().length < 3) {
-      displayErrorNotification('Vardas turi būti bent 3 raidžių ilgio');
+      displayErrorNotification(t('contact.form.validation.nameMinLength'));
       return;
     }
 
     if (!formData.email.includes('@') || !formData.email.includes('.')) {
-      displayErrorNotification('El. paštas turi turėti @ ir . simbolius');
+      displayErrorNotification(t('contact.form.validation.emailInvalid'));
       return;
     }
 
     if (formData.phone && (formData.phone.length < 6 || !/^\d+$/.test(formData.phone))) {
-      displayErrorNotification('Telefono numeris turi būti bent 6 skaičių ir turėti tik skaičius');
+      displayErrorNotification(t('contact.form.validation.phoneInvalid'));
       return;
     }
 
     if (formData.message.trim().length < 3) {
-      displayErrorNotification('Žinutė turi būti bent 3 simbolių ilgio');
+      displayErrorNotification(t('contact.form.validation.messageMinLength'));
       return;
     }
 
     if (formData.message.trim().length > 70) {
-      displayErrorNotification('Žinutė negali būti ilgesnė nei 70 simbolių');
+      displayErrorNotification(t('contact.form.validation.messageMaxLength'));
       return;
     }
 
@@ -118,49 +120,61 @@ const ContactPage = () => {
   const contactInfo = [
     {
       icon: MapPin,
-      title: "Adresas",
-      details: ["Švitrigailos g. 11A-330", "LT-03228 Vilnius", "Lietuva"],
+      title: t('contact.contactInfo.address.title'),
+      details: [
+        t('contact.contactInfo.address.details.0'),
+        t('contact.contactInfo.address.details.1'),
+        t('contact.contactInfo.address.details.2')
+      ],
       color: "text-red-500"
     },
     {
       icon: Phone,
-      title: "Telefonai",
-      details: ["+370 694 98078"],
+      title: t('contact.contactInfo.phone.title'),
+      details: [
+        t('contact.contactInfo.phone.details.0')
+      ],
       color: "text-green-500"
     },
     {
       icon: Mail,
-      title: "El. paštas",
-      details: ["koradiustravel@gmail.com"],
+      title: t('contact.contactInfo.email.title'),
+      details: [
+        t('contact.contactInfo.email.details.0')
+      ],
       color: "text-blue-500"
     },
     {
       icon: Clock,
-      title: "Darbo laikas",
-      details: ["Pr-Pn: 9:00 - 18:00", "Šeštadieniais: 10:00 - 15:00", "Sekmadieniais: uždaryta"],
+      title: t('contact.contactInfo.workingHours.title'),
+      details: [
+        t('contact.contactInfo.workingHours.details.0'),
+        t('contact.contactInfo.workingHours.details.1'),
+        t('contact.contactInfo.workingHours.details.2')
+      ],
       color: "text-purple-500"
     }
   ];
 
   const subjects = [
-    "Bendrasis klausimas",
-    "Kelionės užsakymas",
-    "Medicininis turizmas",
-    "Grupės kelionė",
-    "Skundas ar pasiūlymas",
-    "Techninė pagalba",
-    "Partnerystė",
-    "Kita"
+    t('contact.form.subjects.0'),
+    t('contact.form.subjects.1'),
+    t('contact.form.subjects.2'),
+    t('contact.form.subjects.3'),
+    t('contact.form.subjects.4'),
+    t('contact.form.subjects.5'),
+    t('contact.form.subjects.6'),
+    t('contact.form.subjects.7')
   ];
 
   const officeHours = [
-    { day: "Pirmadienis", hours: "9:00 - 18:00", status: "open" },
-    { day: "Antradienis", hours: "9:00 - 18:00", status: "open" },
-    { day: "Trečiadienis", hours: "9:00 - 18:00", status: "open" },
-    { day: "Ketvirtadienis", hours: "9:00 - 18:00", status: "open" },
-    { day: "Penktadienis", hours: "9:00 - 18:00", status: "open" },
-    { day: "Šeštadienis", hours: "10:00 - 15:00", status: "limited" },
-    { day: "Sekmadienis", hours: "Uždaryta", status: "closed" }
+    { day: t('contact.contactInfo.officeHours.days.monday'), hours: t('contact.contactInfo.officeHours.hours.open'), status: "open" },
+    { day: t('contact.contactInfo.officeHours.days.tuesday'), hours: t('contact.contactInfo.officeHours.hours.open'), status: "open" },
+    { day: t('contact.contactInfo.officeHours.days.wednesday'), hours: t('contact.contactInfo.officeHours.hours.open'), status: "open" },
+    { day: t('contact.contactInfo.officeHours.days.thursday'), hours: t('contact.contactInfo.officeHours.hours.open'), status: "open" },
+    { day: t('contact.contactInfo.officeHours.days.friday'), hours: t('contact.contactInfo.officeHours.hours.open'), status: "open" },
+    { day: t('contact.contactInfo.officeHours.days.saturday'), hours: t('contact.contactInfo.officeHours.hours.limited'), status: "limited" },
+    { day: t('contact.contactInfo.officeHours.days.sunday'), hours: t('contact.contactInfo.officeHours.hours.closed'), status: "closed" }
   ];
 
   return (
@@ -237,10 +251,10 @@ const ContactPage = () => {
         {/* Page Header */}
         <FadeInAnimation className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6">
-            Susisiekite <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-500 to-teal-600">su mumis</span>
+            {t('contact.hero.title.firstPart')} <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-500 to-teal-600">{t('contact.hero.title.secondPart')}</span>
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            Turite klausimų apie keliones? Mūsų komanda pasiruošusi jums padėti!
+            {t('contact.hero.subtitle')}
           </p>
         </FadeInAnimation>
 
@@ -248,42 +262,41 @@ const ContactPage = () => {
         <StaggeredAnimation className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
           <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-2xl p-6 text-white text-center hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 btn-hover-smooth">
             <Phone size={48} className="mx-auto mb-4" />
-            <h3 className="text-xl font-bold mb-2">Skambinkite dabar</h3>
-            <p className="mb-4 opacity-90">Greičiausias būdas gauti atsakymą</p>
+            <h3 className="text-xl font-bold mb-2">{t('contact.quickContact.phone.title')}</h3>
+            <p className="mb-4 opacity-90">{t('contact.quickContact.phone.description')}</p>
             <a
               href="tel:+37069498078"
               className="bg-white hover:bg-gray-100 text-green-600 font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 inline-block btn-hover-smooth"
             >
-              +370 694 98078
+              {t('contact.quickContact.phone.button')}
             </a>
           </div>
 
           <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl p-6 text-white text-center hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 btn-hover-smooth">
             <Mail size={48} className="mx-auto mb-4" />
-            <h3 className="text-xl font-bold mb-2">Rašykite el. laišką</h3>
-            <p className="mb-4 opacity-90">Atsakysime per 2-4 valandas</p>
+            <h3 className="text-xl font-bold mb-2">{t('contact.quickContact.email.title')}</h3>
+            <p className="mb-4 opacity-90">{t('contact.quickContact.email.description')}</p>
             <a
               href="mailto:koradiustravel@gmail.com"
               className="bg-white hover:bg-gray-100 text-blue-600 font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 inline-block btn-hover-smooth"
             >
-              Rašyti laišką
+              {t('contact.quickContact.email.button')}
             </a>
           </div>
 
-  
         </StaggeredAnimation>
 
         {/* Main Content - Redesigned Layout */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-12">
           {/* Left Column - Contact Form */}
           <StaggeredAnimation className="bg-white rounded-2xl shadow-lg p-8">
-            <h2 className="text-2xl font-bold text-gray-800 mb-8">Parašykite mums</h2>
+            <h2 className="text-2xl font-bold text-gray-800 mb-8">{t('contact.form.title')}</h2>
             
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Vardas, pavardė *
+                    {t('contact.form.name.label')}
                   </label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
@@ -294,14 +307,14 @@ const ContactPage = () => {
                       onChange={handleInputChange}
                       required
                       className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-teal-500 focus:outline-none transition-all duration-300 text-lg"
-                      placeholder="Jūsų vardas ir pavardė"
+                      placeholder={t('contact.form.name.placeholder')}
                     />
                   </div>
                 </div>
                 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    El. paštas *
+                    {t('contact.form.email.label')}
                   </label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
@@ -312,7 +325,7 @@ const ContactPage = () => {
                       onChange={handleInputChange}
                       required
                       className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-teal-500 focus:outline-none transition-all duration-300 text-lg"
-                      placeholder="jusu@email.com"
+                      placeholder={t('contact.form.email.placeholder')}
                     />
                   </div>
                 </div>
@@ -321,7 +334,7 @@ const ContactPage = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Telefonas
+                    {t('contact.form.phone.label')}
                   </label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
@@ -338,14 +351,14 @@ const ContactPage = () => {
                         }));
                       }}
                       className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-teal-500 focus:outline-none transition-all duration-300 text-lg"
-                      placeholder="37060012345"
+                      placeholder={t('contact.form.phone.placeholder')}
                     />
                   </div>
                 </div>
                 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Tema *
+                    {t('contact.form.subject.label')}
                   </label>
                   <select
                     name="subject"
@@ -354,7 +367,7 @@ const ContactPage = () => {
                     required
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-teal-500 focus:outline-none transition-all duration-300 text-lg appearance-none bg-white"
                   >
-                    <option value="">Pasirinkite temą</option>
+                    <option value="">{t('contact.form.subject.placeholder')}</option>
                     {subjects.map((subject, index) => (
                       <option key={index} value={subject}>{subject}</option>
                     ))}
@@ -365,7 +378,7 @@ const ContactPage = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Pageidaujamas ryšio būdas
+                    {t('contact.form.preferredContact.label')}
                   </label>
                   <select
                     name="preferredContact"
@@ -373,15 +386,15 @@ const ContactPage = () => {
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-teal-500 focus:outline-none transition-all duration-300 text-lg appearance-none bg-white"
                   >
-                    <option value="email">El. paštas</option>
-                    <option value="phone">Telefonas</option>
-                    <option value="both">Abu būdai</option>
+                    <option value="email">{t('contact.form.preferredContact.email')}</option>
+                    <option value="phone">{t('contact.form.preferredContact.phone')}</option>
+                    <option value="both">{t('contact.form.preferredContact.both')}</option>
                   </select>
                 </div>
                 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Skubumas
+                    {t('contact.form.urgency.label')}
                   </label>
                   <select
                     name="urgency"
@@ -389,16 +402,16 @@ const ContactPage = () => {
                     onChange={handleInputChange}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-teal-500 focus:outline-none transition-all duration-300 text-lg appearance-none bg-white"
                   >
-                    <option value="normal">Įprastas</option>
-                    <option value="urgent">Skubus</option>
-                    <option value="emergency">Labai skubus</option>
+                    <option value="normal">{t('contact.form.urgency.normal')}</option>
+                    <option value="urgent">{t('contact.form.urgency.urgent')}</option>
+                    <option value="emergency">{t('contact.form.urgency.emergency')}</option>
                   </select>
                 </div>
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Žinutė *
+                  {t('contact.form.message.label')}
                 </label>
                 <textarea
                   name="message"
@@ -407,16 +420,16 @@ const ContactPage = () => {
                   required
                   rows={6}
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-teal-500 focus:outline-none transition-all duration-300 text-lg resize-none"
-                  placeholder="Parašykite savo klausimą ar pageidavimus..."
+                  placeholder={t('contact.form.message.placeholder')}
                 />
                 <div className="flex justify-between items-center mt-2">
                   <p className="text-sm text-gray-500">
-                    Minimalus ilgis: 3 simboliai, maksimalus: 70 simbolių
+                    {t('contact.form.message.minLength')}
                   </p>
                   <p className={`text-sm font-medium ${
                     formData.message.length >= 3 && formData.message.length <= 70 ? 'text-green-600' : 'text-gray-500'
                   }`}>
-                    {formData.message.length}/70 simbolių
+                    {formData.message.length}/70 {t('contact.form.message.charCount')}
                   </p>
                 </div>
               </div>
@@ -431,12 +444,12 @@ const ContactPage = () => {
                 {isSubmitting ? (
                   <>
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-                    <span>Siunčiama...</span>
+                    <span>{t('contact.form.submit.sending')}</span>
                   </>
                 ) : (
                   <>
                     <Send size={24} />
-                    <span>Siųsti žinutę</span>
+                    <span>{t('contact.form.submit.button')}</span>
                   </>
                 )}
               </button>
@@ -447,7 +460,7 @@ const ContactPage = () => {
           <StaggeredAnimation className="space-y-6" staggerDelay={0.15}>
             {/* Contact Details */}
             <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h2 className="text-xl font-bold text-gray-800 mb-6">Kontaktinė informacija</h2>
+              <h2 className="text-xl font-bold text-gray-800 mb-6">{t('contact.contactInfo.title')}</h2>
               
               <div className="space-y-4">
                 {contactInfo.map((info, index) => {
@@ -473,7 +486,7 @@ const ContactPage = () => {
 
             {/* Office Hours */}
             <div className="bg-white rounded-2xl shadow-lg p-6">
-              <h3 className="text-lg font-bold text-gray-800 mb-4">Darbo laikas</h3>
+              <h3 className="text-lg font-bold text-gray-800 mb-4">{t('contact.contactInfo.officeHours.title')}</h3>
               <div className="space-y-2">
                 {officeHours.map((schedule, index) => (
                   <div key={index} className="flex justify-between items-center py-1 border-b border-gray-100 last:border-b-0">
@@ -498,8 +511,8 @@ const ContactPage = () => {
         <StaggeredAnimation className="mb-12">
           <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
             <div className="p-6 border-b border-gray-100">
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">Mūsų buveinė</h2>
-              <p className="text-gray-600">Atvykite į mūsų biurą Vilniaus centre</p>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">{t('contact.contactInfo.location.title')}</h2>
+              <p className="text-gray-600">{t('contact.contactInfo.location.description')}</p>
             </div>
             <div className="h-96">
               <iframe
@@ -520,41 +533,41 @@ const ContactPage = () => {
         {/* FAQ Section */}
         <StaggeredAnimation className="bg-white rounded-3xl shadow-lg p-8" staggerDelay={0.1}>
           <h2 className="text-3xl font-bold text-gray-800 text-center mb-8">
-            Dažnai užduodami <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-500 to-teal-600">klausimai</span>
+            {t('contact.contactInfo.faq.title')}
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-6">
               <div className="border-l-4 border-teal-500 pl-4">
-                <h3 className="font-bold text-gray-800 mb-2">Kaip greitai atsakote į užklausas?</h3>
-                <p className="text-gray-600">Į el. laiškus atsakome per 2-4 valandas darbo dienomis. Telefonu - iš karto.</p>
+                <h3 className="font-bold text-gray-800 mb-2">{t('contact.contactInfo.faq.questions.responseTime.question')}</h3>
+                <p className="text-gray-600">{t('contact.contactInfo.faq.questions.responseTime.answer')}</p>
               </div>
               
               <div className="border-l-4 border-teal-500 pl-4">
-                <h3 className="font-bold text-gray-800 mb-2">Ar galiu atvykti be išankstinio susitarimo?</h3>
-                <p className="text-gray-600">Taip, bet rekomenduojame iš anksto susitarti, kad galėtume skirti pakankamai laiko.</p>
+                <h3 className="font-bold text-gray-800 mb-2">{t('contact.contactInfo.faq.questions.appointment.question')}</h3>
+                <p className="text-gray-600">{t('contact.contactInfo.faq.questions.appointment.answer')}</p>
               </div>
               
               <div className="border-l-4 border-teal-500 pl-4">
-                <h3 className="font-bold text-gray-800 mb-2">Ar teikiate konsultacijas lietuvių kalba?</h3>
-                <p className="text-gray-600">Taip, visi mūsų specialistai kalba lietuviškai ir supranta vyresnio amžiaus žmonių poreikius.</p>
+                <h3 className="font-bold text-gray-800 mb-2">{t('contact.contactInfo.faq.questions.language.question')}</h3>
+                <p className="text-gray-600">{t('contact.contactInfo.faq.questions.language.answer')}</p>
               </div>
             </div>
             
             <div className="space-y-6">
               <div className="border-l-4 border-teal-500 pl-4">
-                <h3 className="font-bold text-gray-800 mb-2">Ar galiu keisti kelionės detales?</h3>
-                <p className="text-gray-600">Taip, priklausomai nuo kelionės tipo ir laiko. Susisiekite su mumis dėl detalių.</p>
+                <h3 className="font-bold text-gray-800 mb-2">{t('contact.contactInfo.faq.questions.tripChanges.question')}</h3>
+                <p className="text-gray-600">{t('contact.contactInfo.faq.questions.tripChanges.answer')}</p>
               </div>
               
               <div className="border-l-4 border-teal-500 pl-4">
-                <h3 className="font-bold text-gray-800 mb-2">Kokios mokėjimo galimybės?</h3>
-                <p className="text-gray-600">Priimame grynuosius, korteles, banko pavedimus ir išsimokėjimą.</p>
+                <h3 className="font-bold text-gray-800 mb-2">{t('contact.contactInfo.faq.questions.payment.question')}</h3>
+                <p className="text-gray-600">{t('contact.contactInfo.faq.questions.payment.answer')}</p>
               </div>
               
               <div className="border-l-4 border-teal-500 pl-4">
-                <h3 className="font-bold text-gray-800 mb-2">Ar turite draudimą?</h3>
-                <p className="text-gray-600">Taip, turime visus reikalingus draudimus ir esame LTKIA nariai.</p>
+                <h3 className="font-bold text-gray-800 mb-2">{t('contact.contactInfo.faq.questions.insurance.question')}</h3>
+                <p className="text-gray-600">{t('contact.contactInfo.faq.questions.insurance.answer')}</p>
               </div>
             </div>
           </div>

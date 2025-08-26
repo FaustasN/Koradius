@@ -1,9 +1,11 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Award, Users, Globe, Heart, Shield, Clock, MapPin, Phone, Mail } from 'lucide-react';
+import { useLanguage } from '../hooks/useLanguage';
 
 const AboutPage = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   const handleContact = () => {
     navigate('/contact');
@@ -18,31 +20,31 @@ const AboutPage = () => {
   const values = [
     {
       icon: Heart,
-      title: "Rūpestis klientais",
-      description: "Kiekvienas klientas mums yra svarbus. Stengiamės suprasti jūsų poreikius ir sukurti tobulą kelionę, ypač atsižvelgdami į vyresnio amžiaus žmonių poreikius."
+      title: t('about.values.customerCare.title'),
+      description: t('about.values.customerCare.description')
     },
     {
       icon: Shield,
-      title: "Patikimumas",
-      description: "7 metai rinkoje įrodė mūsų patikimumą. Garantuojame kokybę ir saugumą visose kelionėse. Turime visus reikalingus sertifikatus ir draudimus."
+      title: t('about.values.reliability.title'),
+      description: t('about.values.reliability.description')
     },
     {
       icon: Globe,
-      title: "Patirtis",
-      description: "Turime platų partnerių tinklą visame pasaulyje ir žinome geriausius pasiūlymus. Mūsų komanda reguliariai keliauja ir tikrina paslaugų kokybę."
+      title: t('about.values.experience.title'),
+      description: t('about.values.experience.description')
     },
     {
       icon: Clock,
-      title: "24/7 palaikymas",
-      description: "Esame pasiekiami bet kuriuo paros metu, kad padėtume spręsti bet kokius klausimus kelionės metu. Turime skubios pagalbos liniją."
+      title: t('about.values.support24_7.title'),
+      description: t('about.values.support24_7.description')
     }
   ];
 
   const achievements = [
-    { number: "7+", label: "Metų patirtis", description: "Nuo 2017 metų" },
-    { number: "5000+", label: "Laimingų klientų", description: "Kasmet aptarnaujame apie 1000 klientų" },
-    { number: "50+", label: "Šalių", description: "Visose žemynuose" },
-    { number: "98%", label: "Klientų pasitenkinimas", description: "Pagal atsiliepimus" }
+    { number: t('about.achievements.yearsExperience.number'), label: t('about.achievements.yearsExperience.label'), description: t('about.achievements.yearsExperience.description') },
+    { number: t('about.achievements.happyCustomers.number'), label: t('about.achievements.happyCustomers.label'), description: t('about.achievements.happyCustomers.description') },
+    { number: t('about.achievements.countries.number'), label: t('about.achievements.countries.label'), description: t('about.achievements.countries.description') },
+    { number: t('about.achievements.customerSatisfaction.number'), label: t('about.achievements.customerSatisfaction.label'), description: t('about.achievements.customerSatisfaction.description') }
   ];
 
 
@@ -53,35 +55,26 @@ const AboutPage = () => {
         {/* Page Header */}
         <div className="text-center mb-16">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6">
-            Apie <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-500 to-teal-600">mus</span>
+            {t('about.hero.title.firstPart')} <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-500 to-teal-600">{t('about.hero.title.secondPart')}</span>
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            Jau 7 metus kuriame nepamirštamus kelionių išgyvenimus lietuviams. 
-            Mūsų misija - padėti jums atrasti pasaulio grožį saugiai ir patogiai.
+            {t('about.hero.subtitle')}
           </p>
         </div>
 
         {/* Hero Story Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-20">
           <div>
-            <h2 className="text-3xl font-bold text-gray-800 mb-6">Mūsų istorija</h2>
+            <h2 className="text-3xl font-bold text-gray-800 mb-6">{t('about.story.title')}</h2>
             <div className="space-y-4 text-gray-600 leading-relaxed">
               <p>
-              Koradius Travel gimė iš aistrės kelionėms ir noro padėti lietuviams 
-                atrasti pasaulio grožį. 2017 metais įskūrusi nedidelė kelionių agentūra, kuri 
-                svajojo sukurti paslaugą, kuri būtų pritaikyta būtent 
-                lietuvių poreikiams.
+                {t('about.story.paragraph1')}
               </p>
               <p>
-                Per 7 metus išaugome į patikimą kelionių partnerį, kuris specializuojasi 
-                ne tik įprastose atostogose, bet ir medicininiam turizmui. Ypač didžiuojamės 
-                tuo, kad mūsų paslaugos yra pritaikytos vyresnio amžiaus žmonėms - 
-                suprantame jūsų poreikius ir rūpinamės komfortu kiekviename žingsnyje.
+                {t('about.story.paragraph2')}
               </p>
               <p>
-                Šiandien esame išsiuntę į keliones daugiau nei 5000 lietuvių ir tęsiame 
-                augti, išlaikydami asmeninį požiūrį į kiekvieną klientą. Mūsų tikslas - 
-                ne tik parduoti kelionę, bet sukurti nepamirštamą išgyvenimą.
+                {t('about.story.paragraph3')}
               </p>
             </div>
           </div>
@@ -93,7 +86,7 @@ const AboutPage = () => {
             />
             <div className="absolute -bottom-6 -right-6 bg-gradient-to-r from-teal-500 to-teal-600 text-white p-6 rounded-2xl shadow-xl">
               <div className="text-3xl font-bold">7+</div>
-              <div className="text-sm">Metų patirtis</div>
+              <div className="text-sm">{t('about.heroBadge.yearsExperience')}</div>
             </div>
           </div>
         </div>
@@ -102,7 +95,7 @@ const AboutPage = () => {
 
         {/* Values */}
         <div className="mb-20">
-          <h2 className="text-3xl font-bold text-gray-800 text-center mb-12">Mūsų vertybės</h2>
+          <h2 className="text-3xl font-bold text-gray-800 text-center mb-12">{t('about.values.title')}</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {values.map((value, index) => {
               const IconComponent = value.icon;
@@ -126,7 +119,7 @@ const AboutPage = () => {
 
         {/* Achievements */}
         <div className="bg-gradient-to-r from-teal-500 to-teal-600 rounded-3xl p-12 text-white mb-20">
-          <h2 className="text-3xl font-bold text-center mb-12">Mūsų pasiekimai</h2>
+          <h2 className="text-3xl font-bold text-center mb-12">{t('about.achievements.title')}</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {achievements.map((achievement, index) => (
               <div key={index} className="text-center">
@@ -142,22 +135,22 @@ const AboutPage = () => {
 
         {/* Certifications */}
         <div className="mb-20">
-          <h2 className="text-3xl font-bold text-gray-800 text-center mb-12">Sertifikatai ir narystės</h2>
+          <h2 className="text-3xl font-bold text-gray-800 text-center mb-12">{t('about.certifications.title')}</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="bg-white rounded-2xl shadow-lg p-8 text-center hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
               <Award className="text-teal-600 mx-auto mb-4" size={48} />
-              <h3 className="text-xl font-bold text-gray-800 mb-3">LTKIA narys</h3>
-              <p className="text-gray-600">Lietuvos turizmo ir kelionių agentūrų asociacijos narys nuo 2017</p>
+              <h3 className="text-xl font-bold text-gray-800 mb-3">{t('about.certifications.ltkia.title')}</h3>
+              <p className="text-gray-600">{t('about.certifications.ltkia.description')}</p>
             </div>
             <div className="bg-white rounded-2xl shadow-lg p-8 text-center hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
               <Shield className="text-teal-600 mx-auto mb-4" size={48} />
-              <h3 className="text-xl font-bold text-gray-800 mb-3">IATA agentas</h3>
-              <p className="text-gray-600">Tarptautinės oro transporto asociacijos akredituotas agentas</p>
+              <h3 className="text-xl font-bold text-gray-800 mb-3">{t('about.certifications.iata.title')}</h3>
+              <p className="text-gray-600">{t('about.certifications.iata.description')}</p>
             </div>
             <div className="bg-white rounded-2xl shadow-lg p-8 text-center hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
               <Globe className="text-teal-600 mx-auto mb-4" size={48} />
-              <h3 className="text-xl font-bold text-gray-800 mb-3">ETOA narys</h3>
-              <p className="text-gray-600">Europos turizmo operatorių asociacijos narys</p>
+              <h3 className="text-xl font-bold text-gray-800 mb-3">{t('about.certifications.etoa.title')}</h3>
+              <p className="text-gray-600">{t('about.certifications.etoa.description')}</p>
             </div>
           </div>
         </div>
@@ -165,19 +158,15 @@ const AboutPage = () => {
         {/* Mission & Vision */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-20">
           <div className="bg-white rounded-2xl shadow-lg p-8">
-            <h3 className="text-2xl font-bold text-gray-800 mb-4">Mūsų misija</h3>
+            <h3 className="text-2xl font-bold text-gray-800 mb-4">{t('about.missionVision.mission.title')}</h3>
             <p className="text-gray-600 leading-relaxed">
-              Sukurti nepamirštamus kelionių išgyvenimus kiekvienam klientui, ypač 
-              atsižvelgiant į vyresnio amžiaus žmonių poreikius. Teikti aukščiausios 
-              kokybės paslaugas, užtikrinant saugumą, komfortą ir asmeninį požiūrį.
+              {t('about.missionVision.mission.description')}
             </p>
           </div>
           <div className="bg-white rounded-2xl shadow-lg p-8">
-            <h3 className="text-2xl font-bold text-gray-800 mb-4">Mūsų vizija</h3>
+            <h3 className="text-2xl font-bold text-gray-800 mb-4">{t('about.missionVision.vision.title')}</h3>
             <p className="text-gray-600 leading-relaxed">
-              Tapti pirmaujančia kelionių agentūra Lietuvoje, žinoma dėl išskirtinio 
-              klientų aptarnavimo, patikimumo ir inovatyvių sprendimų. Padėti kiekvienam 
-              lietuviui atrasti pasaulio grožį ir sukurti nepamirštamus prisiminimus.
+              {t('about.missionVision.vision.description')}
             </p>
           </div>
         </div>
@@ -185,20 +174,20 @@ const AboutPage = () => {
         {/* Call to Action */}
         <div className="text-center mt-16">
           <p className="text-lg text-gray-600 mb-6">
-            Pasiruošę pradėti savo kelionę su mumis?
+            {t('about.callToAction.title')}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button 
               onClick={handleContact}
               className="bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg btn-hover-smooth"
             >
-              Susisiekti su mumis
+              {t('about.callToAction.contactButton')}
             </button>
             <button 
               onClick={handleViewTours}
               className="border-2 border-teal-500 hover:bg-teal-500 hover:text-white text-teal-600 font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 btn-hover-smooth"
             >
-              Žiūrėti keliones
+                            {t('about.callToAction.viewToursButton')}
             </button>
           </div>
         </div>

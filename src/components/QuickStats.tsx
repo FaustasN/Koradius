@@ -1,37 +1,39 @@
 import React from 'react';
 import { TrendingUp, Users, Star, Award } from 'lucide-react';
+import { useLanguage } from '../hooks/useLanguage';
 
 const QuickStats = () => {
+  const { t } = useLanguage();
   const stats = [
     {
       icon: TrendingUp,
       number: "85%",
-      label: "Klientų grįžta pakartotinai",
-      description: "Mūsų klientai renkasi mus ne kartą",
+      label: t('home.quickStats.customerReturn.label'),
+      description: t('home.quickStats.customerReturn.description'),
       color: "text-green-500",
       bgColor: "bg-green-50"
     },
     {
-      icon: Users,
+      icon: Users,  
       number: "24/7",
-      label: "Palaikymas kelionės metu",
-      description: "Visada esame pasiekiami pagalbai",
+      label: t('home.quickStats.support24_7.label'),
+      description: t('home.quickStats.support24_7.description'),
       color: "text-blue-500",
       bgColor: "bg-blue-50"
     },
     {
       icon: Star,
       number: "4.9",
-      label: "Vidutinis įvertinimas",
-      description: "Pagal klientų atsiliepimus",
+      label: t('home.quickStats.averageRating.label'),
+      description: t('home.quickStats.averageRating.description'),
       color: "text-yellow-500",
       bgColor: "bg-yellow-50"
     },
     {
       icon: Award,
-      number: "100%",
-      label: "Pinigų grąžinimo garantija",
-      description: "Jei kelionė neįvyks mūsų kaltės dėl",
+      number: "98%",
+      label: t('home.quickStats.customerSatisfaction.label'),
+      description: t('home.quickStats.customerSatisfaction.description'),
       color: "text-purple-500",
       bgColor: "bg-purple-50"
     }

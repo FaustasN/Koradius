@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, ChevronLeft, ChevronRight, MapPin, Camera, Heart, Share2, Download } from 'lucide-react';
 import { galleryApi, transformGalleryItem } from '../services/apiService';
+import { useLanguage } from '../hooks/useLanguage';
 
 const GalleryPage = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [selectedImage, setSelectedImage] = useState<number | null>(null);
   const [activeFilter, setActiveFilter] = useState('all');
   
@@ -123,10 +125,10 @@ const GalleryPage = () => {
 
   // Fallback images data in case the API is not available  
   const filters = [
-    { id: 'all', label: 'Visos nuotraukos', icon: Camera, count: images.length },
-    { id: 'beach', label: 'Paplūdimiai', icon: Camera, count: images.filter(img => img.category === 'beach').length },
-    { id: 'city', label: 'Miestai', icon: Camera, count: images.filter(img => img.category === 'city').length },
-    { id: 'nature', label: 'Gamta', icon: Camera, count: images.filter(img => img.category === 'nature').length }
+    { id: 'all', label: t('gallery.filters.all'), icon: Camera, count: images.length },
+    { id: 'beach', label: t('gallery.filters.beach'), icon: Camera, count: images.filter(img => img.category === 'beach').length },
+    { id: 'city', label: t('gallery.filters.city'), icon: Camera, count: images.filter(img => img.category === 'city').length },
+    { id: 'nature', label: t('gallery.filters.nature'), icon: Camera, count: images.filter(img => img.category === 'nature').length }
   ];
 
   const filteredImages = activeFilter === 'all' 
@@ -170,11 +172,11 @@ const GalleryPage = () => {
           <div className="flex items-center justify-center space-x-2 mb-4">
             <Camera className="text-teal-500" size={32} />
             <h1 className="text-4xl md:text-5xl font-bold text-gray-800">
-              Kelionių <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-500 to-teal-600">galerija</span>
+              {t('gallery.galleryPage.title.firstPart')} <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-500 to-teal-600">{t('gallery.galleryPage.title.secondPart')}</span>
             </h1>
           </div>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            Pažiūrėkite, kur jau apsilankė mūsų klientai ir įkvėpkitės savo kitai kelionei
+            {t('gallery.galleryPage.subtitle')}
           </p>
         </div>
 
@@ -183,14 +185,14 @@ const GalleryPage = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12 max-w-2xl mx-auto">
           <div className="bg-white rounded-2xl shadow-lg p-6 text-center">
             <div className="text-3xl font-bold text-teal-600 mb-2">{images.length}</div>
-            <div className="text-gray-600">Nuotraukos</div>
+            <div className="text-gray-600">{t('gallery.galleryPage.stats.photos')}</div>
           </div>
        
           <div className="bg-white rounded-2xl shadow-lg p-6 text-center">
             <div className="text-3xl font-bold text-teal-600 mb-2">
               {images.reduce((sum, img) => sum + img.likes, 0)}
             </div>
-            <div className="text-gray-600">Patinka</div>
+            <div className="text-gray-600">{t('gallery.galleryPage.stats.likes')}</div>
           </div>
         
         </div>
@@ -220,7 +222,7 @@ const GalleryPage = () => {
         {loading && (
           <div className="flex items-center justify-center py-16">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
-            <span className="ml-4 text-gray-600 text-lg">Kraunamos nuotraukos...</span>
+            <span className="ml-4 text-gray-600 text-lg">{t('gallery.galleryPage.loading')}</span>
           </div>
         )}
 
@@ -231,7 +233,7 @@ const GalleryPage = () => {
               onClick={() => window.location.reload()} 
               className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-6 rounded-lg transition-colors duration-300"
             >
-              Bandyti dar kartą
+              {t('gallery.galleryPage.retryButton')}
             </button>
           </div>
         )}
@@ -369,16 +371,16 @@ const GalleryPage = () => {
         {/* Upload Section */}
         <div className="mt-20 bg-gradient-to-r from-teal-500 to-teal-600 rounded-3xl p-12 text-white text-center">
           <Camera size={64} className="mx-auto mb-6 opacity-80" />
-          <h2 className="text-3xl font-bold mb-4">Pasidalinkite savo kelionių nuotraukomis</h2>
+          <h2 className="text-3xl font-bold mb-4">{t('gallery.uploadSection.title')}</h2>
           <p className="text-xl opacity-90 mb-8 max-w-2xl mx-auto">
-            Norite, kad jūsų nuotraukos atsidurtų mūsų galerijoje? Siųskite jas į{' '}
+            {t('gallery.uploadSection.description')}{' '}
             <a 
               href="mailto:koradiustravel@gmail.com" 
               className="text-black hover:text-gray-800 underline transition-colors duration-200"
             >
               koradiustravel@gmail.com
             </a>{' '}
-            ir įkvėpkite kitus keliautojus!
+            {t('gallery.uploadSection.and')}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
           </div>
@@ -388,33 +390,33 @@ const GalleryPage = () => {
         <div className="mt-16 bg-white rounded-3xl shadow-lg p-8">
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-gray-800 mb-4">
-              Mėnesio nuotraukų <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-500 to-teal-600">konkursas</span>
+              {t('gallery.photoContest.title.firstPart')} <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-500 to-teal-600">{t('gallery.photoContest.title.secondPart')}</span>
             </h2>
             <p className="text-lg text-gray-600">
-              Kiekvieną mėnesį renkame geriausią kelionės nuotrauką ir apdovanojame autorių!
+              {t('gallery.photoContest.description')}
             </p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center p-6 bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-2xl">
               <div className="text-4xl mb-4">🥇</div>
-              <h3 className="text-xl font-bold text-gray-800 mb-2">1 vieta</h3>
-              <p className="text-gray-600 mb-4">Kelionė į pasirinktą šalį</p>
-              <div className="text-2xl font-bold text-yellow-600">500€ vertės</div>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">{t('gallery.photoContest.firstPlace.title')}</h3>
+              <p className="text-gray-600 mb-4">{t('gallery.photoContest.firstPlace.description')}</p>
+              <div className="text-2xl font-bold text-yellow-600">{t('gallery.photoContest.firstPlace.value')}</div>
             </div>
             
             <div className="text-center p-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl">
               <div className="text-4xl mb-4">🥈</div>
-              <h3 className="text-xl font-bold text-gray-800 mb-2">2 vieta</h3>
-              <p className="text-gray-600 mb-4">Savaitgalio kelionė</p>
-              <div className="text-2xl font-bold text-gray-600">300€ vertės</div>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">{t('gallery.photoContest.secondPlace.title')}</h3>
+              <p className="text-gray-600 mb-4">{t('gallery.photoContest.secondPlace.description')}</p>
+              <div className="text-2xl font-bold text-gray-600">{t('gallery.photoContest.secondPlace.value')}</div>
             </div>
             
             <div className="text-center p-6 bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl">
               <div className="text-4xl mb-4">🥉</div>
-              <h3 className="text-xl font-bold text-gray-800 mb-2">3 vieta</h3>
-              <p className="text-gray-600 mb-4">Kelionių kuponas</p>
-              <div className="text-2xl font-bold text-orange-600">150€ vertės</div>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">{t('gallery.photoContest.thirdPlace.title')}</h3>
+              <p className="text-gray-600 mb-4">{t('gallery.photoContest.thirdPlace.description')}</p>
+              <div className="text-2xl font-bold text-orange-600">{t('gallery.photoContest.thirdPlace.value')}</div>
             </div>
           </div>
           
