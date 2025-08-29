@@ -4,6 +4,7 @@ const { queuePaymentOperation } = require('./queues/paymentQueue');
 const { QueueEvents } = require('bullmq');
 const { redisConfig } = require('./queues/config');
 const { mapPaymentMethod } = require('./utils/paymentMethodMapper');
+const { createSecurePaymentUrl, verifyPaymentToken } = require('./utils/paymentTokens');
 const router = express.Router();
 
 // Initialize queue events for waiting on job completion
@@ -183,23 +184,38 @@ async function handlePaymentAccept(req, res) {
                 console.log(`Payment ${orderid} marked as completed with method: ${rawPaymentMethod} (${finalPaymentMethod})`);
             }
 
-            // Redirect to frontend success page with payment details
+            // Redirect to frontend success page with secure token
             const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-            const successUrl = `${frontendUrl}/payment-success?orderid=${orderid}&amount=${paymentData.amount}&currency=${paymentData.currency}&payment=${paymentData.paymentMethod}`;
+            const secureUrl = createSecurePaymentUrl({
+                orderId: orderid,
+                status: 'completed',
+                amount: paymentData.amount,
+                currency: paymentData.currency,
+                paymentMethod: finalPaymentMethod
+            }, frontendUrl);
             
-            console.log('Redirecting to success page:', successUrl);
-            res.redirect(successUrl);
+            console.log('Redirecting to secure success page with token');
+            res.redirect(secureUrl);
             
         } catch (error) {
             console.error('Error retrieving payment data:', error);
-            // Fallback to query parameters if available
+            // Fallback to query parameters if available - but still use secure token
             const allParams = { ...req.query, ...req.body };
             const amount = allParams.amount;
             const currency = allParams.currency;
             const payment = allParams.payment;
             const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-            const successUrl = `${frontendUrl}/payment-success?orderid=${orderid}&amount=${amount || '0'}&currency=${currency || 'EUR'}&payment=${payment || 'Nenurodyta'}`;
-            res.redirect(successUrl);
+            
+            // Create fallback secure token
+            const secureUrl = createSecurePaymentUrl({
+                orderId: orderid,
+                status: 'completed',
+                amount: amount || '0',
+                currency: currency || 'EUR',
+                paymentMethod: mapPaymentMethod(payment)
+            }, frontendUrl);
+            
+            res.redirect(secureUrl);
         }
         
     } catch (error) {
@@ -216,7 +232,7 @@ async function handlePaymentAccept(req, res) {
 router.get('/cancel', handlePaymentCancel);
 router.post('/cancel', handlePaymentCancel);
 
-function handlePaymentCancel(req, res) {
+async function handlePaymentCancel(req, res) {
     try {
         // Log callback for debugging (simplified)
         console.log('=== PAYMENT CANCEL CALLBACK ===');
@@ -254,12 +270,77 @@ function handlePaymentCancel(req, res) {
         
         console.log('Processed cancel data:', { orderid, amount, currency });
 
-        // Redirect to frontend cancel page with order ID and amount
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-        const cancelUrl = `${frontendUrl}/payment-cancelled?orderid=${orderid}&amount=${amount}&currency=${currency}`;
-        
-        console.log('Redirecting to cancel page:', cancelUrl);
-        res.redirect(cancelUrl);
+        // If we have an order ID, try to get payment data from database and create secure token
+        if (orderid) {
+            try {
+                const job = await queuePaymentOperation('get-payment-status', { orderId: orderid });
+                const result = await job.waitUntilFinished(queueEvents);
+                
+                let paymentData = {
+                    amount: amount || '0',
+                    currency: currency || 'EUR',
+                    paymentMethod: 'Nenurodyta'
+                };
+
+                if (result.success) {
+                    paymentData = {
+                        amount: result.payment.amount,
+                        currency: result.payment.currency,
+                        paymentMethod: mapPaymentMethod(result.payment.paymentMethod)
+                    };
+                    
+                    // Update payment status to cancelled
+                    const updateJob = await queuePaymentOperation('update-payment-status', {
+                        orderId: orderid,
+                        status: 'cancelled',
+                        gatewayResponse: allParams
+                    });
+                    await updateJob.waitUntilFinished(queueEvents);
+                    console.log(`Payment ${orderid} marked as cancelled`);
+                }
+
+                // Create secure token for cancelled payment
+                const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+                const secureUrl = createSecurePaymentUrl({
+                    orderId: orderid,
+                    status: 'cancelled',
+                    amount: paymentData.amount,
+                    currency: paymentData.currency,
+                    paymentMethod: paymentData.paymentMethod
+                }, frontendUrl, '/payment-cancelled');
+                
+                console.log('Redirecting to secure cancel page with token');
+                res.redirect(secureUrl);
+                
+            } catch (error) {
+                console.error('Error retrieving payment data for cancellation:', error);
+                // Fallback with secure token using available data
+                const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+                const secureUrl = createSecurePaymentUrl({
+                    orderId: orderid || 'unknown',
+                    status: 'cancelled',
+                    amount: amount || '0',
+                    currency: currency || 'EUR',
+                    paymentMethod: 'Nenurodyta'
+                }, frontendUrl, '/payment-cancelled');
+                
+                res.redirect(secureUrl);
+            }
+        } else {
+            // No order ID available - this can happen with Paysera cancellations
+            // Create a generic cancellation token for user experience
+            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+            const genericCancelToken = createSecurePaymentUrl({
+                orderId: 'CANCELLED',
+                status: 'cancelled', 
+                amount: '0',
+                currency: 'EUR',
+                paymentMethod: 'Atšaukta'
+            }, frontendUrl, '/payment-cancelled');
+            
+            console.log('Payment cancelled without order ID - redirecting to generic cancel page');
+            res.redirect(genericCancelToken);
+        }
         
     } catch (error) {
         console.error('Payment cancel error:', error);
@@ -481,7 +562,7 @@ router.get('/test-success/:orderId', async (req, res) => {
 
 /**
  * GET /api/payment/test-cancel/:orderId
- * Test endpoint to simulate cancelled payment callback
+ * Test endpoint to simulate cancelled payment callback with proper order ID
  */
 router.get('/test-cancel/:orderId', async (req, res) => {
     try {
@@ -490,25 +571,87 @@ router.get('/test-cancel/:orderId', async (req, res) => {
         console.log('=== TEST PAYMENT CANCEL SIMULATION ===');
         console.log('Simulating cancelled payment for orderId:', orderId);
         
-        // Update payment status to cancelled
-        await queuePaymentOperation('update-payment-status', {
-            orderId,
-            status: 'cancelled',
-            paymentMethod: null,
-            transactionId: null
-        });
+        // Simulate Paysera cancellation callback with order ID
+        // This will trigger the same logic as a real Paysera cancellation
+        req.query = { orderid: orderId, amount: '200.00', currency: 'EUR' };
         
-        // Redirect to frontend cancelled page
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-        const cancelUrl = `${frontendUrl}/payment-cancelled?orderid=${orderId}&amount=200&currency=EUR`;
-        
-        console.log('Redirecting to cancel page:', cancelUrl);
-        res.redirect(cancelUrl);
+        // Call the actual cancel handler
+        await handlePaymentCancel(req, res);
         
     } catch (error) {
         console.error('Test payment cancel error:', error);
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
         res.redirect(`${frontendUrl}/payment-cancelled?error=test_error`);
+    }
+});
+
+/**
+ * POST /api/payment/verify-token
+ * Verifies a payment success token and returns payment details
+ */
+router.post('/verify-token', async (req, res) => {
+    try {
+        const { token } = req.body;
+        
+        if (!token) {
+            return res.status(400).json({
+                success: false,
+                message: 'Token is required'
+            });
+        }
+        
+        // Verify the token
+        const tokenData = verifyPaymentToken(token);
+        
+        if (!tokenData) {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid or expired token'
+            });
+        }
+        
+        // Double-check payment status in database if we have a real order ID
+        if (tokenData.orderId !== 'CANCELLED') {
+            const job = await queuePaymentOperation('get-payment-status', { 
+                orderId: tokenData.orderId 
+            });
+            const result = await job.waitUntilFinished(queueEvents);
+            
+            if (!result.success) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Payment not found'
+                });
+            }
+            
+            // For success tokens, verify the payment is actually completed
+            if (tokenData.status === 'completed' && result.payment.status !== 'completed') {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Payment not completed'
+                });
+            }
+        }
+        
+        // Return verified payment details
+        res.json({
+            success: true,
+            payment: {
+                orderId: tokenData.orderId,
+                amount: tokenData.amount,
+                currency: tokenData.currency,
+                paymentMethod: tokenData.paymentMethod,
+                status: tokenData.status,
+                verifiedAt: new Date().toISOString()
+            }
+        });
+        
+    } catch (error) {
+        console.error('Token verification error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error during token verification'
+        });
     }
 });
 

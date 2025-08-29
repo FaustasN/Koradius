@@ -32,9 +32,8 @@ const PaymentSuccessPage: React.FC = () => {
         }
 
         // Verify token with backend
-        const apiUrl = import.meta.env.VITE_API_URL || '';
-        const endpoint = apiUrl ? `${apiUrl}/api/payment/verify-token` : '/api/payment/verify-token';
-        const response = await fetch(endpoint, {
+        const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+        const response = await fetch(`${API_BASE_URL}/api/payment/verify-token`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -137,69 +136,70 @@ const PaymentSuccessPage: React.FC = () => {
           Ačiū už mokėjimą!
         </h1>
 
-        <p className="text-lg text-gray-600 mb-8">
-          Jūsų mokėjimas buvo sėkmingai apdorotas. Neužilgo atsiųsime kelionės dokumentus.
+        <p className="text-gray-600 mb-8">
+          Jūsų mokėjimas buvo sėkmingai apdorotas. Neužilgo atsitysime kelionės dokumentus.
         </p>
 
-        {orderDetails && (
-          <div className="bg-gray-50 rounded-lg p-6 mb-8">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">
-              Mokėjimo informacija
-            </h2>
+        <div className="bg-gray-50 rounded-lg p-6 mb-8">
+          <h2 className="text-xl font-semibold text-gray-800 mb-6">Mokėjimo informacija</h2>
+          
+          <div className="space-y-4 text-left">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Užsakymo ID:</span>
+              <span className="font-medium text-gray-800">{orderDetails.orderId}</span>
+            </div>
             
-            <div className="space-y-3 text-left">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Užsakymo ID:</span>
-                <span className="font-semibold">{orderDetails.orderId}</span>
-              </div>
-              
-              <div className="flex justify-between">
-                <span className="text-gray-600">Suma:</span>
-                <span className="font-bold text-green-600">
-                  {orderDetails.amount} {orderDetails.currency}
-                </span>
-              </div>
-              
-              <div className="flex justify-between">
-                <span className="text-gray-600">Mokėjimo metodas:</span>
-                <span className="font-medium">{orderDetails.paymentMethod}</span>
-              </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Suma:</span>
+              <span className="font-medium text-gray-800 text-green-600">
+                {orderDetails.amount} {orderDetails.currency}
+              </span>
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Mokėjimo metodas:</span>
+              <span className="font-medium text-gray-800">{orderDetails.paymentMethod}</span>
             </div>
           </div>
-        )}
+        </div>
 
         <div className="bg-blue-50 rounded-lg p-6 mb-8">
-          <h3 className="text-lg font-semibold text-blue-800 mb-3">
-            Ką toliau?
-          </h3>
-          <ul className="text-blue-700 text-left space-y-2">
-            <li>• Patvirtinimo laiškas išsiųstas jūsų el. paštu</li>
+          <h3 className="text-lg font-semibold text-blue-800 mb-4">Ką toliau?</h3>
+          <ul className="text-left text-blue-700 space-y-2">
+            <li>• Patvirtinimo laiškas išsiųstas jūsų el. paštą</li>
             <li>• Kelionės dokumentai bus išsiųsti per 24-48 valandas</li>
             <li>• Jei turite klausimų, susisiekite su mumis</li>
           </ul>
         </div>
 
-        <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
             to="/"
-            className="inline-block bg-blue-600 text-white px-8 py-3 rounded-md hover:bg-blue-700 transition-colors font-medium"
+            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium"
           >
             Grįžti į pagrindinį puslapį
           </Link>
-          
-          <div className="text-sm text-gray-500">
-            <p>Linkėjimai,</p>
-            <p className="font-medium">UAB Koradius komanda</p>
-          </div>
+          <Link
+            to="/contact"
+            className="border border-blue-600 text-blue-600 px-6 py-3 rounded-lg hover:bg-blue-50 transition-colors font-medium"
+          >
+            Susisiekti su mumis
+          </Link>
         </div>
 
-        <div className="mt-8 pt-6 border-t border-gray-200">
-          <a
-            href="https://koradius-travel.com/"
-            className="text-blue-600 hover:text-blue-800 text-sm"
-          >
-            koradius-travel.com
-          </a>
+        <div className="mt-8 text-sm text-gray-500">
+          <p>Linkėjimai,</p>
+          <p>UAB Koradius komanda</p>
+          <div className="mt-4">
+            <a 
+              href="https://koradius-travel.com" 
+              className="text-blue-600 hover:text-blue-500"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              koradius-travel.com
+            </a>
+          </div>
         </div>
       </div>
     </div>

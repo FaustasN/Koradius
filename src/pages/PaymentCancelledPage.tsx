@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
+
 // Simple X Circle Icon component
 const XCircleIcon = ({ className }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -7,36 +8,135 @@ const XCircleIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
+interface PaymentData {
+  orderId: string;
+  amount: string;
+  currency: string;
+  paymentMethod: string;
+  status: string;
+}
+
 const PaymentCancelledPage: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const [orderId, setOrderId] = useState<string>('');
-  const [amount, setAmount] = useState<string>('');
-  const [currency, setCurrency] = useState<string>('');
+  const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Get order ID and other details from URL parameters
-    const orderIdParam = searchParams.get('orderid');
-    const amountParam = searchParams.get('amount');
-    const currencyParam = searchParams.get('currency');
+    const token = searchParams.get('token');
+    const errorParam = searchParams.get('error');
+    
+    // Handle error cases (no token)
+    if (errorParam) {
+      if (errorParam === 'no_order_id') {
+        setPaymentData({
+          orderId: 'Nenurodyta',
+          amount: '0',
+          currency: 'EUR',
+          paymentMethod: 'Atšaukta',
+          status: 'cancelled'
+        });
+      } else {
+        setError('Mokėjimo duomenų nėra arba nuoroda netinkama.');
+      }
+      setLoading(false);
+      return;
+    }
 
-    // Debug: log all URL parameters
-    console.log('PaymentCancelledPage - URL parameters:', {
-      orderId: orderIdParam,
-      amount: amountParam,
-      currency: currencyParam,
-      allParams: Object.fromEntries(searchParams.entries())
+    if (!token) {
+      // Fallback to old URL parameter system for backward compatibility
+      const orderIdParam = searchParams.get('orderid');
+      const amountParam = searchParams.get('amount');
+      const currencyParam = searchParams.get('currency');
+
+      console.log('PaymentCancelledPage - URL parameters (fallback):', {
+        orderId: orderIdParam,
+        amount: amountParam,
+        currency: currencyParam,
+        allParams: Object.fromEntries(searchParams.entries())
+      });
+
+      if (orderIdParam) {
+        setPaymentData({
+          orderId: orderIdParam,
+          amount: amountParam || '0',
+          currency: currencyParam || 'EUR',
+          paymentMethod: 'Nenurodyta',
+          status: 'cancelled'
+        });
+      } else {
+        setError('Mokėjimo duomenų nėra.');
+      }
+      setLoading(false);
+      return;
+    }
+
+    // Verify secure token
+    const apiUrl = import.meta.env.VITE_API_URL || '';
+    const endpoint = apiUrl ? `${apiUrl}/api/payment/verify-token` : '/api/payment/verify-token';
+    fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ token }),
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        setPaymentData(data.payment);
+      } else {
+        setError(data.message || 'Mokėjimo patvirtinimo žetonas netinkamas arba pasibaigė galiojimo laikas.');
+      }
+    })
+    .catch(err => {
+      console.error('Token verification error:', err);
+      setError('Klaida tikrinant mokėjimo duomenis.');
+    })
+    .finally(() => {
+      setLoading(false);
     });
-
-    if (orderIdParam) {
-      setOrderId(orderIdParam);
-    }
-    if (amountParam) {
-      setAmount(amountParam);
-    }
-    if (currencyParam) {
-      setCurrency(currencyParam);
-    }
   }, [searchParams]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12">
+        <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Kraunami mokėjimo duomenys...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12">
+        <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8 text-center">
+          <div className="mb-6">
+            <XCircleIcon className="mx-auto h-16 w-16 text-red-500" />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-800 mb-4">Mokėjimo patvirtinimo klaida</h1>
+          <p className="text-red-600 mb-6">{error}</p>
+          <div className="space-y-4">
+            <Link
+              to="/contact"
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 inline-block"
+            >
+              Susisiekti su mumis
+            </Link>
+            <br />
+            <Link
+              to="/"
+              className="text-blue-600 hover:text-blue-800 underline"
+            >
+              Grįžti į pagrindinį puslapį
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12">
@@ -54,25 +154,31 @@ const PaymentCancelledPage: React.FC = () => {
           Jei tai įvyko netyčia, kviečiame bandyti dar kartą.
         </p>
 
-        {(orderId || amount) && (
+        {paymentData && (
           <div className="bg-gray-50 rounded-lg p-6 mb-8">
             <h2 className="text-xl font-semibold text-gray-800 mb-4">
               Užsakymo informacija
             </h2>
             
             <div className="text-left space-y-3">
-              {orderId && (
+              {paymentData.orderId && (
                 <div className="flex justify-between">
                   <span className="text-gray-600">Užsakymo ID:</span>
-                  <span className="font-semibold">{orderId}</span>
+                  <span className="font-semibold">{paymentData.orderId}</span>
                 </div>
               )}
-              {amount && (
+              {paymentData.amount && (
                 <div className="flex justify-between">
                   <span className="text-gray-600">Suma:</span>
                   <span className="font-semibold text-red-600">
-                    {parseFloat(amount) > 1000 ? (parseFloat(amount) / 100).toFixed(2) : parseFloat(amount).toFixed(2)} {currency || 'EUR'}
+                    {parseFloat(paymentData.amount) > 1000 ? (parseFloat(paymentData.amount) / 100).toFixed(2) : parseFloat(paymentData.amount).toFixed(2)} {paymentData.currency || 'EUR'}
                   </span>
+                </div>
+              )}
+              {paymentData.paymentMethod && paymentData.paymentMethod !== 'Nenurodyta' && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Mokėjimo būdas:</span>
+                  <span className="font-semibold">{paymentData.paymentMethod}</span>
                 </div>
               )}
             </div>
