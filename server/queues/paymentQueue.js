@@ -67,6 +67,8 @@ const paymentWorker = new Worker('payment processing', async (job) => {
         return await verifyPayment(data);
       case 'get-payment-status':
         return await getPaymentStatus(data);
+      case 'get-recent-pending-payment':
+        return await getRecentPendingPayment(data);
       case 'refund-payment':
         return await processRefund(data);
       case 'cleanup-old-payments':
@@ -133,7 +135,7 @@ async function createPaymentRecord(data) {
       RETURNING id, order_id, amount, currency, status, created_at
     `, [
       orderId, 
-      amount, 
+      parseFloat(amount).toFixed(2), // Ensure proper decimal format
       currency, 
       description, 
       encryptedEmail, 
@@ -404,6 +406,64 @@ async function getPaymentStatus(data) {
     
   } catch (error) {
     console.error('Failed to get payment status:', error);
+    throw error;
+  } finally {
+    await pool.end();
+  }
+}
+
+async function getRecentPendingPayment(data) {
+  const pool = createDbConnection();
+  
+  try {
+    const { ipAddress, userAgent, timeWindow = 30 } = data;
+    
+    // Calculate the time window
+    const timeThreshold = new Date();
+    timeThreshold.setMinutes(timeThreshold.getMinutes() - timeWindow);
+
+    const result = await pool.query(`
+      SELECT 
+        id,
+        order_id,
+        amount,
+        currency,
+        status,
+        created_at,
+        ip_address,
+        user_agent
+      FROM payments 
+      WHERE status = 'pending' 
+        AND ip_address = $1 
+        AND user_agent = $2
+        AND created_at >= $3
+      ORDER BY created_at DESC
+      LIMIT 1
+    `, [ipAddress, userAgent, timeThreshold]);
+
+    if (result.rows.length === 0) {
+      return {
+        success: false,
+        message: 'No recent pending payment found'
+      };
+    }
+
+    const payment = result.rows[0];
+    
+    return {
+      success: true,
+      payment: {
+        id: payment.id,
+        orderId: payment.order_id,
+        amount: payment.amount,
+        currency: payment.currency,
+        status: payment.status,
+        createdAt: payment.created_at
+      }
+    };
+    
+  } catch (error) {
+    console.error('Failed to get recent pending payment:', error);
     throw error;
   } finally {
     await pool.end();
@@ -690,6 +750,7 @@ module.exports = {
   processPaymentCallback,
   updatePaymentStatus,
   getPaymentStatus,
+  getRecentPendingPayment,
   verifyPayment,
   processRefund,
   cleanupOldPayments,

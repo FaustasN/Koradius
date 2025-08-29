@@ -21,6 +21,7 @@ function createPaymentToken(paymentData, expiryMinutes = 30) {
     status: paymentData.status,
     amount: paymentData.amount,
     currency: paymentData.currency,
+    paymentMethod: paymentData.paymentMethod, // Include payment method in token
     timestamp: Date.now(),
     expiry: expiry
   };

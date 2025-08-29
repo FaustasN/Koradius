@@ -100,16 +100,12 @@ router.post('/accept', handlePaymentAccept);
 
 async function handlePaymentAccept(req, res) {
     try {
-        // Log callback for debugging (simplified)
         console.log('=== PAYMENT ACCEPT CALLBACK ===');
-        console.log('Method:', req.method);
-        console.log('Request URL:', req.url);
         
         // Paysera might use different parameter names - check both query and body
         const allParams = { ...req.query, ...req.body };
         let orderid = allParams.orderid || allParams.order_id || allParams.orderId || allParams.projectorder;
         let extractedPaymentMethod = null;
-        
         // If no direct orderid found, try to extract from Paysera data parameter
         if (!orderid && allParams.data) {
             try {
@@ -140,8 +136,7 @@ async function handlePaymentAccept(req, res) {
             }
         }
         
-        console.log('Final extracted orderid:', orderid);
-        console.log('Final extracted payment method:', extractedPaymentMethod);
+        console.log(`Processing payment accept for order: ${orderid}`);
         
         if (!orderid) {
             console.error('No orderid found in accept callback. Available params:', Object.keys(allParams));
@@ -167,7 +162,7 @@ async function handlePaymentAccept(req, res) {
                 const finalPaymentMethod = mapPaymentMethod(rawPaymentMethod);
                 
                 paymentData = {
-                    amount: result.payment.amount,
+                    amount: result.payment.amount.toString(), // Ensure it's a string
                     currency: result.payment.currency,
                     paymentMethod: finalPaymentMethod
                 };
@@ -181,7 +176,7 @@ async function handlePaymentAccept(req, res) {
                     gatewayResponse: allParams // Store the full callback data
                 });
                 await updateJob.waitUntilFinished(queueEvents);
-                console.log(`Payment ${orderid} marked as completed with method: ${rawPaymentMethod} (${finalPaymentMethod})`);
+                console.log(`Payment ${orderid} marked as completed with method: ${finalPaymentMethod}`);
             }
 
             // Redirect to frontend success page with secure token
@@ -191,10 +186,10 @@ async function handlePaymentAccept(req, res) {
                 status: 'completed',
                 amount: paymentData.amount,
                 currency: paymentData.currency,
-                paymentMethod: finalPaymentMethod
+                paymentMethod: paymentData.paymentMethod
             }, frontendUrl);
             
-            console.log('Redirecting to secure success page with token');
+            console.log('Redirecting to secure success page');
             res.redirect(secureUrl);
             
         } catch (error) {
@@ -206,11 +201,11 @@ async function handlePaymentAccept(req, res) {
             const payment = allParams.payment;
             const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
             
-            // Create fallback secure token
+            // Create fallback secure token with string conversion
             const secureUrl = createSecurePaymentUrl({
                 orderId: orderid,
                 status: 'completed',
-                amount: amount || '0',
+                amount: amount ? amount.toString() : '0',
                 currency: currency || 'EUR',
                 paymentMethod: mapPaymentMethod(payment)
             }, frontendUrl);
@@ -234,16 +229,23 @@ router.post('/cancel', handlePaymentCancel);
 
 async function handlePaymentCancel(req, res) {
     try {
-        // Log callback for debugging (simplified)
+        // Log callback for debugging (comprehensive)
         console.log('=== PAYMENT CANCEL CALLBACK ===');
         console.log('Method:', req.method);
         console.log('Request URL:', req.url);
+        console.log('Full query params:', JSON.stringify(req.query, null, 2));
+        console.log('Full body params:', JSON.stringify(req.body, null, 2));
+        console.log('All headers:', JSON.stringify(req.headers, null, 2));
         
         // Paysera might use different parameter names - check both query and body
         const allParams = { ...req.query, ...req.body };
+        console.log('Combined all params:', JSON.stringify(allParams, null, 2));
+        
         let orderid = allParams.orderid || allParams.order_id || allParams.orderId || allParams.projectorder;
         let amount = allParams.amount;
         let currency = allParams.currency;
+        
+        console.log('Initial extracted values:', { orderid, amount, currency });
         
         // If no direct orderid found, try to extract from Paysera data parameter
         if (!orderid && allParams.data) {
@@ -263,12 +265,28 @@ async function handlePaymentCancel(req, res) {
                     amount,
                     currency
                 });
+                
+                // Also log all parameters in the decoded data
+                console.log('All parameters in decoded data:');
+                for (const [key, value] of urlParams.entries()) {
+                    console.log(`  ${key}: ${value}`);
+                }
             } catch (error) {
                 console.error('Error decoding Paysera data parameter in cancel:', error);
             }
         }
         
-        console.log('Processed cancel data:', { orderid, amount, currency });
+        // If still no orderid, try to extract from referrer URL or check if we can find any order pattern
+        if (!orderid && req.headers.referer) {
+            console.log('Checking referrer for order ID:', req.headers.referer);
+            const orderMatch = req.headers.referer.match(/KOR-\d+-[A-Z0-9]+/);
+            if (orderMatch) {
+                orderid = orderMatch[0];
+                console.log('Extracted order ID from referrer:', orderid);
+            }
+        }
+        
+        console.log('Final processed cancel data:', { orderid, amount, currency });
 
         // If we have an order ID, try to get payment data from database and create secure token
         if (orderid) {
@@ -284,7 +302,7 @@ async function handlePaymentCancel(req, res) {
 
                 if (result.success) {
                     paymentData = {
-                        amount: result.payment.amount,
+                        amount: result.payment.amount.toString(), // Ensure it's a string
                         currency: result.payment.currency,
                         paymentMethod: mapPaymentMethod(result.payment.paymentMethod)
                     };
@@ -297,6 +315,7 @@ async function handlePaymentCancel(req, res) {
                     });
                     await updateJob.waitUntilFinished(queueEvents);
                     console.log(`Payment ${orderid} marked as cancelled`);
+                    console.log(`Payment data for cancelled token: amount=${paymentData.amount}, currency=${paymentData.currency}, method=${paymentData.paymentMethod}`);
                 }
 
                 // Create secure token for cancelled payment
@@ -317,7 +336,7 @@ async function handlePaymentCancel(req, res) {
                 // Fallback with secure token using available data
                 const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
                 const secureUrl = createSecurePaymentUrl({
-                    orderId: orderid || 'unknown',
+                    orderId: orderid,
                     status: 'cancelled',
                     amount: amount || '0',
                     currency: currency || 'EUR',
@@ -328,10 +347,53 @@ async function handlePaymentCancel(req, res) {
             }
         } else {
             // No order ID available - this can happen with Paysera cancellations
-            // Create a generic cancellation token for user experience
+            // Try to find the most recent pending payment to cancel
+            console.log('No order ID found in cancel callback - attempting to find recent pending payment');
+            
+            try {
+                // Get the most recent pending payment
+                const job = await queuePaymentOperation('get-recent-pending-payment', {
+                    ipAddress: req.ip,
+                    userAgent: req.get('User-Agent'),
+                    timeWindow: 30 // minutes
+                });
+                const result = await job.waitUntilFinished(queueEvents);
+                
+                if (result.success && result.payment) {
+                    console.log(`Found recent pending payment to cancel: ${result.payment.orderId}`);
+                    
+                    // Update this payment to cancelled status
+                    const updateJob = await queuePaymentOperation('update-payment-status', {
+                        orderId: result.payment.orderId,
+                        status: 'cancelled',
+                        gatewayResponse: allParams
+                    });
+                    await updateJob.waitUntilFinished(queueEvents);
+                    console.log(`Payment ${result.payment.orderId} marked as cancelled`);
+                    
+                    // Create secure token with the actual payment data
+                    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+                    const secureUrl = createSecurePaymentUrl({
+                        orderId: result.payment.orderId,
+                        status: 'cancelled',
+                        amount: result.payment.amount.toString(),
+                        currency: result.payment.currency,
+                        paymentMethod: 'Atšaukta'
+                    }, frontendUrl, '/payment-cancelled');
+                    
+                    console.log('Redirecting to secure cancel page with actual payment data');
+                    res.redirect(secureUrl);
+                    return;
+                }
+            } catch (error) {
+                console.error('Error finding recent pending payment:', error);
+            }
+            
+            // Fallback to generic cancellation token
             const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+            const genericOrderId = `CANCELLED-${Date.now()}`;
             const genericCancelToken = createSecurePaymentUrl({
-                orderId: 'CANCELLED',
+                orderId: genericOrderId,
                 status: 'cancelled', 
                 amount: '0',
                 currency: 'EUR',
@@ -611,25 +673,30 @@ router.post('/verify-token', async (req, res) => {
         }
         
         // Double-check payment status in database if we have a real order ID
-        if (tokenData.orderId !== 'CANCELLED') {
+        if (tokenData.orderId !== 'CANCELLED' && tokenData.orderId !== 'NERASTAS' && tokenData.status !== 'cancelled') {
             const job = await queuePaymentOperation('get-payment-status', { 
                 orderId: tokenData.orderId 
             });
             const result = await job.waitUntilFinished(queueEvents);
             
             if (!result.success) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Payment not found'
-                });
-            }
-            
-            // For success tokens, verify the payment is actually completed
-            if (tokenData.status === 'completed' && result.payment.status !== 'completed') {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Payment not completed'
-                });
+                // For cancelled payments, allow the token to be valid even if DB lookup fails
+                if (tokenData.status === 'cancelled') {
+                    console.log(`Cancelled payment token verified for order: ${tokenData.orderId}`);
+                } else {
+                    return res.status(404).json({
+                        success: false,
+                        message: 'Payment not found'
+                    });
+                }
+            } else {
+                // For success tokens, verify the payment is actually completed
+                if (tokenData.status === 'completed' && result.payment.status !== 'completed') {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Payment not completed'
+                    });
+                }
             }
         }
         
@@ -640,7 +707,7 @@ router.post('/verify-token', async (req, res) => {
                 orderId: tokenData.orderId,
                 amount: tokenData.amount,
                 currency: tokenData.currency,
-                paymentMethod: tokenData.paymentMethod,
+                paymentMethod: tokenData.paymentMethod || 'Nenurodyta',
                 status: tokenData.status,
                 verifiedAt: new Date().toISOString()
             }
