@@ -435,7 +435,9 @@ const initializeLogging = async () => {
 
 // Initialize scheduled jobs for maintenance and monitoring
 const LogCleanupScheduler = require('./services/logCleanupScheduler');
+const PaymentTimeoutScheduler = require('./services/paymentTimeoutScheduler');
 let logCleanupScheduler = null;
+let paymentTimeoutScheduler = null;
 
 const initializeScheduledJobs = async () => {
   console.log('🔄 Initializing automated maintenance jobs...');
@@ -444,12 +446,17 @@ const initializeScheduledJobs = async () => {
     // Initialize log cleanup scheduler with the queue function
     logCleanupScheduler = new LogCleanupScheduler(queueDatabaseOperation);
     
+    // Initialize payment timeout scheduler with the queue function
+    paymentTimeoutScheduler = new PaymentTimeoutScheduler(queuePaymentOperation);
+    
     // Set the logging service if available
     if (loggingService) {
       logCleanupScheduler.setLoggingService(loggingService);
+      paymentTimeoutScheduler.setLoggingService(loggingService);
     }
     
     logCleanupScheduler.start();
+    paymentTimeoutScheduler.start();
     
     console.log('✅ Automated maintenance jobs initialized successfully');
     
@@ -643,7 +650,7 @@ const initializeDatabase = async () => {
         user_agent TEXT,
         session_id VARCHAR(255),
         product_info_encrypted TEXT,
-        status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed', 'cancelled', 'refunded')),
+        status VARCHAR(50) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed', 'cancelled', 'refunded', 'timed out')),
         payment_method VARCHAR(100),
         transaction_id VARCHAR(255),
         gateway_response_encrypted TEXT,
@@ -741,6 +748,22 @@ const initializeDatabase = async () => {
     await pool.query('CREATE INDEX IF NOT EXISTS idx_payment_refunds_payment_id ON payment_refunds(payment_id)');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_payment_refunds_status ON payment_refunds(status)');
     await pool.query('CREATE INDEX IF NOT EXISTS idx_payments_archive_created_at ON payments_archive(created_at)');
+
+    // Update payment status constraint to include 'timed out'
+    try {
+      await pool.query(`
+        ALTER TABLE payments 
+        DROP CONSTRAINT IF EXISTS payments_status_check
+      `);
+      await pool.query(`
+        ALTER TABLE payments 
+        ADD CONSTRAINT payments_status_check 
+        CHECK (status IN ('pending', 'processing', 'completed', 'failed', 'cancelled', 'refunded', 'timed out'))
+      `);
+      console.log('✅ Payment status constraint updated to include "timed out"');
+    } catch (error) {
+      console.log('⚠️ Payment status constraint update skipped (constraint may not exist or already updated)');
+    }
     await pool.query('CREATE INDEX IF NOT EXISTS idx_payments_archive_archived_at ON payments_archive(archived_at)');
 
     // Create default admin if none exists
@@ -2525,6 +2548,141 @@ app.put('/api/admin/logs/scheduler/time', authenticateToken, async (req, res) =>
   }
 });
 
+// Payment timeout scheduler management endpoints
+app.get('/api/admin/payments/timeout-scheduler/status', authenticateToken, async (req, res) => {
+  try {
+    if (!paymentTimeoutScheduler) {
+      return res.json({
+        success: false,
+        message: 'Payment timeout scheduler not initialized'
+      });
+    }
+
+    const status = paymentTimeoutScheduler.getStatus();
+    res.json({
+      success: true,
+      scheduler: status
+    });
+    
+  } catch (error) {
+    console.error('Failed to get payment timeout scheduler status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get payment timeout scheduler status',
+      error: error.message
+    });
+  }
+});
+
+app.post('/api/admin/payments/timeout-scheduler/start', authenticateToken, async (req, res) => {
+  try {
+    if (!paymentTimeoutScheduler) {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment timeout scheduler not initialized'
+      });
+    }
+
+    paymentTimeoutScheduler.start();
+    res.json({
+      success: true,
+      message: 'Payment timeout scheduler started'
+    });
+    
+  } catch (error) {
+    console.error('Failed to start payment timeout scheduler:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to start payment timeout scheduler',
+      error: error.message
+    });
+  }
+});
+
+app.post('/api/admin/payments/timeout-scheduler/stop', authenticateToken, async (req, res) => {
+  try {
+    if (!paymentTimeoutScheduler) {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment timeout scheduler not initialized'
+      });
+    }
+
+    paymentTimeoutScheduler.stop();
+    res.json({
+      success: true,
+      message: 'Payment timeout scheduler stopped'
+    });
+    
+  } catch (error) {
+    console.error('Failed to stop payment timeout scheduler:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to stop payment timeout scheduler',
+      error: error.message
+    });
+  }
+});
+
+app.post('/api/admin/payments/timeout-scheduler/check-now', authenticateToken, async (req, res) => {
+  try {
+    if (!paymentTimeoutScheduler) {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment timeout scheduler not initialized'
+      });
+    }
+
+    await paymentTimeoutScheduler.runTimeoutCheckNow();
+    res.json({
+      success: true,
+      message: 'Manual payment timeout check initiated'
+    });
+    
+  } catch (error) {
+    console.error('Failed to run manual payment timeout check:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to run manual payment timeout check',
+      error: error.message
+    });
+  }
+});
+
+app.put('/api/admin/payments/timeout-scheduler/config', authenticateToken, async (req, res) => {
+  try {
+    const { checkIntervalMinutes, paymentTimeoutMinutes } = req.body;
+    
+    if (!paymentTimeoutScheduler) {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment timeout scheduler not initialized'
+      });
+    }
+
+    if (typeof checkIntervalMinutes !== 'number' || typeof paymentTimeoutMinutes !== 'number') {
+      return res.status(400).json({
+        success: false,
+        message: 'Check interval and payment timeout must be numbers (in minutes)'
+      });
+    }
+
+    paymentTimeoutScheduler.setConfiguration(checkIntervalMinutes, paymentTimeoutMinutes);
+    res.json({
+      success: true,
+      message: `Payment timeout configuration updated - Check interval: ${checkIntervalMinutes} minutes, Payment timeout: ${paymentTimeoutMinutes} minutes`
+    });
+    
+  } catch (error) {
+    console.error('Failed to update payment timeout configuration:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update payment timeout configuration',
+      error: error.message
+    });
+  }
+});
+
 // Add error logging middleware at the end
 app.use((error, req, res, next) => {
   if (loggingMiddleware) {
@@ -2548,6 +2706,11 @@ process.on('SIGINT', async () => {
     // Stop log cleanup scheduler
     if (logCleanupScheduler && logCleanupScheduler.isRunning) {
       logCleanupScheduler.stop();
+    }
+    
+    // Stop payment timeout scheduler
+    if (paymentTimeoutScheduler && paymentTimeoutScheduler.isRunning) {
+      paymentTimeoutScheduler.stop();
     }
     
     // Close queue connections

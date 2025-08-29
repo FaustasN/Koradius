@@ -46,6 +46,9 @@ interface PaymentSummary {
   successfulPayments: number;
   failedPayments: number;
   pendingPayments: number;
+  timedOutPayments: number;
+  cancelledPayments: number;
+  refundedPayments: number;
   totalAmount: number;
   currencies: string[];
 }
@@ -187,6 +190,7 @@ const AdminPaymentManagement: React.FC = () => {
       case 'failed': return 'text-red-600 bg-red-100';
       case 'cancelled': return 'text-gray-600 bg-gray-100';
       case 'refunded': return 'text-purple-600 bg-purple-100';
+      case 'timed out': return 'text-orange-600 bg-orange-100';
       default: return 'text-gray-600 bg-gray-100';
     }
   };
@@ -292,6 +296,7 @@ const AdminPaymentManagement: React.FC = () => {
                   <option value="failed">Failed</option>
                   <option value="cancelled">Cancelled</option>
                   <option value="refunded">Refunded</option>
+                  <option value="timed out">Timed Out</option>
                 </select>
                 <button
                   onClick={() => updatePaymentStatus(payment.order_id, newStatus)}
@@ -397,6 +402,7 @@ const AdminPaymentManagement: React.FC = () => {
               <option value="failed">Failed</option>
               <option value="cancelled">Cancelled</option>
               <option value="refunded">Refunded</option>
+              <option value="timed out">Timed Out</option>
             </select>
           </div>
           <div>

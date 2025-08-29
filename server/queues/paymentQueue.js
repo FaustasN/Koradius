@@ -73,6 +73,8 @@ const paymentWorker = new Worker('payment processing', async (job) => {
         return await processRefund(data);
       case 'cleanup-old-payments':
         return await cleanupOldPayments(data);
+      case 'timeout-pending-payments':
+        return await timeoutPendingPayments(data);
       case 'generate-payment-report':
         return await generatePaymentReport(data);
       default:
@@ -508,6 +510,103 @@ async function cleanupOldPayments(data) {
   }
 }
 
+async function timeoutPendingPayments(data) {
+  const pool = createDbConnection();
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN');
+    
+    const { timeoutMinutes = 60 } = data;
+    const timeoutDate = new Date();
+    timeoutDate.setMinutes(timeoutDate.getMinutes() - timeoutMinutes);
+
+    console.log(`Checking for pending payments older than ${timeoutMinutes} minutes (before ${timeoutDate.toISOString()})`);
+
+    // Find all pending payments that are older than the timeout threshold
+    const pendingPaymentsResult = await client.query(`
+      SELECT id, order_id, amount, currency, created_at
+      FROM payments 
+      WHERE status = 'pending' AND created_at < $1
+      ORDER BY created_at ASC
+    `, [timeoutDate]);
+
+    const expiredPayments = pendingPaymentsResult.rows;
+    
+    if (expiredPayments.length === 0) {
+      console.log('No expired pending payments found');
+      await client.query('ROLLBACK');
+      return {
+        success: true,
+        expiredCount: 0,
+        timeoutMinutes,
+        cutoffTime: timeoutDate.toISOString(),
+        message: 'No expired payments found'
+      };
+    }
+
+    console.log(`Found ${expiredPayments.length} expired pending payments`);
+
+    // Update expired payments to 'timed out' status
+    const updateResult = await client.query(`
+      UPDATE payments 
+      SET 
+        status = 'timed out',
+        updated_at = CURRENT_TIMESTAMP,
+        gateway_response_encrypted = $2
+      WHERE status = 'pending' AND created_at < $1
+      RETURNING id, order_id, amount, currency
+    `, [
+      timeoutDate,
+      encrypt(JSON.stringify({ 
+        reason: 'payment_timeout',
+        timeout_minutes: timeoutMinutes,
+        expired_at: new Date().toISOString(),
+        original_created_at: timeoutDate.toISOString()
+      }))
+    ]);
+
+    // Create payment history entries for each expired payment
+    for (const payment of updateResult.rows) {
+      await client.query(`
+        INSERT INTO payment_history (payment_id, status, notes, created_at)
+        VALUES ($1, 'timed out', $2, CURRENT_TIMESTAMP)
+      `, [
+        payment.id,
+        `Payment timed out after ${timeoutMinutes} minutes of inactivity`
+      ]);
+    }
+
+    await client.query('COMMIT');
+    
+    console.log(`Successfully marked ${updateResult.rowCount} payments as timed out`);
+    
+    // Log details of expired payments (without sensitive data)
+    const expiredDetails = updateResult.rows.map(payment => ({
+      orderId: payment.order_id,
+      amount: payment.amount,
+      currency: payment.currency
+    }));
+
+    return {
+      success: true,
+      expiredCount: updateResult.rowCount,
+      timeoutMinutes,
+      cutoffTime: timeoutDate.toISOString(),
+      expiredPayments: expiredDetails,
+      message: `${updateResult.rowCount} pending payments timed out and marked as expired`
+    };
+    
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Failed to timeout pending payments:', error);
+    throw error;
+  } finally {
+    client.release();
+    await pool.end();
+  }
+}
+
 async function generatePaymentReport(data) {
   const pool = createDbConnection();
   
@@ -553,6 +652,9 @@ async function generatePaymentReport(data) {
       successfulPayments: payments.filter(p => p.status === 'completed').length,
       failedPayments: payments.filter(p => p.status === 'failed').length,
       pendingPayments: payments.filter(p => p.status === 'pending').length,
+      timedOutPayments: payments.filter(p => p.status === 'timed out').length,
+      cancelledPayments: payments.filter(p => p.status === 'cancelled').length,
+      refundedPayments: payments.filter(p => p.status === 'refunded').length,
       totalAmount: payments.reduce((sum, p) => sum + parseFloat(p.successful_amount || 0), 0),
       currencies: [...new Set(payments.map(p => p.currency))]
     };
@@ -754,5 +856,6 @@ module.exports = {
   verifyPayment,
   processRefund,
   cleanupOldPayments,
+  timeoutPendingPayments,
   generatePaymentReport
 };
